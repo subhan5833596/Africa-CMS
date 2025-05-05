@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f4f4f4;
+        font-family: Arial, sans-serif;
+        margin: 0;
+      }
+
+      .login-container {
+        background-color: #ffffff;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        width: 100%;
+        max-width: 350px;
+        margin: 15px;
+      }
+
+      .login-container h2 {
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 24px;
+        color: #333;
+      }
+
+      .input-field {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px;
+        background-color: #ff0000;
+        border: none;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+
+      .btn:hover {
+        background-color: #cc0000;
+      }
+
+      .message {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .error {
+        color: red;
+      }
+
+      .success {
+        color: green;
+      }
+
+      /* Responsive Styles */
+      @media (max-width: 768px) {
+        .login-container {
+          width: 90%;
+        }
+
+        .login-container h2 {
+          font-size: 20px;
+        }
+
+        .input-field {
+          padding: 10px;
+        }
+
+        .btn {
+          padding: 10px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .login-container {
+          width: 95%;
+        }
+
+        .login-container h2 {
+          font-size: 18px;
+        }
+
+        .input-field {
+          padding: 8px;
+        }
+
+        .btn {
+          padding: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <h2>Login</h2>
+      <input
+        type="text"
+        id="username"
+        class="input-field"
+        placeholder="Username"
+      />
+      <input
+        type="password"
+        id="password"
+        class="input-field"
+        placeholder="Password"
+      />
+      <button class="btn" onclick="login()">Login</button>
+      <p id="message" class="message"></p>
+    </div>
+
+    <script>
+      const baseUrl = window.location.origin;
+      function login() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        const messageElement = document.getElementById("message");
+
+        // Clear any previous messages
+        messageElement.innerHTML = "";
+
+        // Basic validation
+        if (!username || !password) {
+          messageElement.innerHTML = "Please enter both username and password.";
+          messageElement.classList.add("error");
+          return;
+        }
+
+        const data = { username, password };
+
+        fetch(`${baseUrl}/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.status === "success") {
+              messageElement.innerHTML = "Login successful!";
+              messageElement.classList.add("success");
+              window.location.href = "/dashboard"; // Redirect to dashboard or main page
+            } else {
+              messageElement.innerHTML = data.message;
+              messageElement.classList.add("error");
+            }
+          })
+          .catch((error) => {
+            messageElement.innerHTML =
+              "An error occurred. Please try again later.";
+            messageElement.classList.add("error");
+            console.error("Error during login:", error);
+          });
+      }
+    </script>
+  </body>
+</html>

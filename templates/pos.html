@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POS</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        background: #f5f7fa;
+      }
+
+      .dashboard {
+        display: flex;
+        height: 100vh;
+      }
+
+      .sidebar {
+        width: 220px;
+        background: white;
+        padding: 20px;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .logo {
+        font-weight: bold;
+        font-size: 24px;
+        margin-bottom: 30px;
+      }
+
+      .sidebar nav a {
+        display: block;
+        margin-bottom: 20px;
+        color: #555;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 20px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header input {
+        width: 300px;
+        padding: 10px;
+        border-radius: 20px;
+        border: 1px solid #ccc;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .header-right img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+      h1,
+      h2 {
+        color: #2c3e50;
+      }
+      .input-field {
+        padding: 10px;
+        width: 100%;
+        max-width: 400px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .btn {
+        padding: 8px 16px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .btn:hover {
+        background-color: #2980b9;
+      }
+      ul {
+        list-style: none;
+        padding-left: 0;
+      }
+      li {
+        margin-bottom: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: center;
+      }
+      th {
+        background-color: #3498db;
+        color: white;
+      }
+      tr:hover {
+        background-color: #f1f1f1;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .modal-content {
+        background: #fff;
+        margin: 10% auto;
+        padding: 30px;
+        border-radius: 10px;
+        max-width: 500px;
+      }
+      .close {
+        float: right;
+        font-size: 24px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <aside class="sidebar">
+        <div class="logo">Finance</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('upload') }}">Product Uploading</a>
+          <a href="{{ url_for('pos') }}">POS</a>
+          <a href="{{ url_for('customer') }}">Customers</a>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <h1>Point of Sale</h1>
+        <div style="display: flex; gap: 10px">
+          <input
+            type="text"
+            class="input-field"
+            id="search-product"
+            placeholder="Search Product..."
+          />
+          <button class="btn" onclick="filterProducts()">Search</button>
+        </div>
+
+        <div id="product-list"></div>
+        <div id="loader" style="display: none; margin-top: 20px">
+          Loading...
+        </div>
+
+        <h2>Cart</h2>
+        <ul id="cart-items"></ul>
+        <p>
+          <strong>Total: $<span id="total-amount">0</span></strong>
+        </p>
+        <button class="btn" onclick="showCheckoutForm()">Checkout</button>
+        <p id="checkout-status"></p>
+      </div>
+
+      <!-- Modal -->
+      <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+          <span class="close" onclick="closeCheckoutForm()">&times;</span>
+          <h3>Checkout</h3>
+          <input
+            type="text"
+            id="customer-name"
+            class="input-field"
+            placeholder="Customer Name"
+          />
+          <input
+            type="text"
+            id="customer-phone"
+            class="input-field"
+            placeholder="Customer Phone"
+          />
+          <input
+            type="number"
+            id="money-paid"
+            class="input-field"
+            placeholder="Money Paid"
+          />
+          <input
+            type="number"
+            id="remaining-balance"
+            class="input-field"
+            placeholder="Remaining Balance"
+            disabled
+          />
+          <ul id="checkout-cart-items"></ul>
+          <p><strong>Items Info:</strong></p>
+          <ul id="items-info"></ul>
+          <button class="btn" onclick="continueCheckout()">Confirm</button>
+          <button class="btn" onclick="closeCheckoutForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const baseUrl = window.location.origin;
+      let allProducts = [];
+      let cart = [];
+      let totalAmount = 0;
+
+      document
+        .getElementById("search-product")
+        .addEventListener("keyup", function (e) {
+          if (e.key === "Enter") {
+            filterProducts();
+          }
+        });
+
+      function filterProducts() {
+        const keyword = document.getElementById("search-product").value.trim();
+        if (keyword.length === 0) {
+          document.getElementById("product-list").innerHTML = "";
+          return;
+        }
+        document.getElementById("loader").style.display = "block"; // Show loader
+        fetch(`${baseUrl}product-search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ keyword }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            allProducts =
+              data.products.map((product) => ({
+                id: product.id,
+                title: product.title,
+                price: product.price,
+                quantity: product.quantity,
+                size: product.size,
+              })) || [];
+            renderProducts();
+            document.getElementById("loader").style.display = "none"; // Hide loader
+          })
+          .catch(() => {
+            document.getElementById("loader").style.display = "none"; // Hide loader even if error
+          });
+      }
+
+      function renderProducts() {
+        const listDiv = document.getElementById("product-list");
+        listDiv.innerHTML = "";
+
+        if (allProducts.length === 0) {
+          listDiv.innerHTML = "<p>No products found.</p>"; // This message appears when no products match the keyword
+          return;
+        }
+
+        let table = `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Price ($)</th>
+              <th>Quantity</th>
+              <th>Size</th>
+              <th>Qty to Add</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+        allProducts.forEach((product) => {
+          table += `
+          <tr>
+            <td>${product.id}</td>
+            <td>${product.title}</td>
+            <td>${product.price}</td>
+            <td>${product.quantity}</td>
+            <td>${product.size}</td>
+            <td><input type="number" id="qty-${
+              product.id
+            }" value="1" min="1" max="${
+            product.quantity
+          }" style="width: 60px;" /></td>
+            <td><button class="btn" onclick='addToCart(${JSON.stringify(
+              product
+            )}, "qty-${product.id}")'>Add to Cart</button></td>
+          </tr>
+        `;
+        });
+
+        table += `
+          </tbody>
+        </table>
+      `;
+
+        listDiv.innerHTML = table;
+      }
+
+      function addToCart(product, qtyId) {
+        const qtyInput = document.getElementById(qtyId);
+        const qty = parseInt(qtyInput.value);
+
+        if (qty > product.quantity) {
+          alert(`❌ Only ${product.quantity} available in stock.`);
+          return;
+        }
+        if (qty <= 0) {
+          alert("❌ Quantity must be at least 1.");
+          return;
+        }
+
+        cart.push({ ...product, quantity: qty });
+        renderCart();
+      }
+
+      function renderCart() {
+        const list = document.getElementById("cart-items");
+        list.innerHTML = "";
+        totalAmount = 0;
+
+        cart.forEach((item, index) => {
+          const li = document.createElement("li");
+          li.innerHTML = `${item.title} x ${item.quantity} - $${(
+            item.price * item.quantity
+          ).toFixed(2)}
+                <button class='btn' onclick='removeFromCart(${index})'>Remove</button>`;
+          list.appendChild(li);
+          totalAmount += item.price * item.quantity;
+        });
+
+        document.getElementById("total-amount").innerText =
+          totalAmount.toFixed(2);
+      }
+
+      function removeFromCart(index) {
+        cart.splice(index, 1);
+        renderCart();
+      }
+
+      document
+        .getElementById("money-paid")
+        .addEventListener("input", function () {
+          const paid = parseFloat(this.value) || 0;
+          const remaining = totalAmount - paid;
+          document.getElementById("remaining-balance").value =
+            remaining.toFixed(2);
+        });
+
+      function showCheckoutForm() {
+        if (cart.length === 0) {
+          document.getElementById("checkout-status").innerText =
+            "Cart is empty!";
+          document.getElementById("checkout-status").style.color = "red";
+          return;
+        }
+        document.getElementById("checkout-modal").style.display = "block";
+
+        // Show Cart Summary
+        document.getElementById("checkout-cart-items").innerHTML = cart
+          .map((item) => `<li>${item.title} x ${item.quantity} </li>`)
+          .join("");
+
+        // Show Full Items Info
+        document.getElementById("items-info").innerHTML = cart
+          .map(
+            (item) =>
+              `<li><strong>${item.title}</strong> (Qty: ${item.quantity}, Price: $${item.price} , Size: ${item.size})</li>`
+          )
+          .join("");
+
+        document.getElementById("remaining-balance").value =
+          totalAmount.toFixed(2);
+      }
+
+      function closeCheckoutForm() {
+        document.getElementById("checkout-modal").style.display = "none";
+      }
+
+      function continueCheckout() {
+        const customerName = document
+          .getElementById("customer-name")
+          .value.trim();
+        let customerPhone = document
+          .getElementById("customer-phone")
+          .value.trim();
+        const moneyPaid = parseFloat(
+          document.getElementById("money-paid").value
+        );
+
+        if (!customerName || isNaN(moneyPaid)) {
+          alert("❌ Customer name and money paid are required.");
+          return;
+        }
+
+        if (!customerPhone) {
+          customerPhone = "-"; // if empty, set to dash
+        }
+
+        const remainingBalance = parseFloat(
+          document.getElementById("remaining-balance").value
+        );
+
+        document.getElementById("loader").style.display = "block"; // show loader
+        fetch(`${baseUrl}checkout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName,
+            customerPhone,
+            moneyPaid,
+            remainingBalance,
+            products: cart.map((p) => ({
+              id: p.id,
+              title: p.title,
+              price: p.price,
+              quantity: p.quantity,
+              size: p.size,
+            })),
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none"; // hide loader
+            if (data.message === "Checkout successful") {
+              document.getElementById("checkout-status").style.color = "green";
+              document.getElementById("checkout-status").innerText =
+                "✅ Checkout successful!";
+              cart = [];
+              renderCart();
+              closeCheckoutForm();
+            } else {
+              document.getElementById("checkout-status").style.color = "red";
+              document.getElementById("checkout-status").innerText =
+                "❌ Checkout failed.";
+            }
+          })
+          .catch(() => {
+            document.getElementById("loader").style.display = "none"; // hide loader if fail
+            alert("❌ Checkout failed. Please try again.");
+          });
+      }
+    </script>
+  </body>
+</html>

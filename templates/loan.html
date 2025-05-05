@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customers</title>
+    <link rel="stylesheet" href="../static/css/style.css" />
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      table th,
+      table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      table th {
+        background-color: #00c3ff;
+        color: white;
+      }
+
+      table tr:hover {
+        background-color: #f1f1f1;
+      }
+
+      table td {
+        font-size: 16px;
+      }
+
+      .no-data {
+        text-align: center;
+        font-size: 18px;
+        color: #888;
+        padding: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <aside class="sidebar">
+        <div class="logo">Finance</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('shop') }}">Shop</a>
+          <a href="{{ url_for('upload') }}">Product Uploading</a>
+          <a href="{{ url_for('customer') }}">Customers</a>
+          <a href="{{ url_for('loan') }}">On Loan</a>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          "
+        >
+          <h1>ON LOAN - Customers</h1>
+          <div style="display: flex; gap: 10px">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search customer product..."
+              style="padding: 8px; width: 250px"
+            />
+            <button
+              id="search-btn"
+              onclick="searchCustomer()"
+              style="padding: 8px 16px"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+
+        <div class="row">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Items Bought</th>
+                <th>Amount Paid</th>
+                <th>Amount Left</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customer-list">
+              <!-- Customer data will be populated here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="loader" id="loader" style="display: none"></div>
+    </div>
+
+    <script>
+      const baseUrl = window.location.origin;
+      function searchCustomer() {
+        const query = document.getElementById("searchInput").value.trim();
+        if (!query) {
+          alert("Please enter a product title to search.");
+          return;
+        }
+        document.getElementById("loader").style.display = "block";
+        fetch(
+          `${baseUrl}/search-product?q=${encodeURIComponent(
+            query
+          )}&type=customer`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none";
+            const list = document.getElementById("customer-list");
+            list.innerHTML = "";
+            console.log(data);
+
+            if (data.results && data.results.length > 0) {
+              data.results.forEach((cust) => {
+                const row = document.createElement("tr");
+                row.dataset.customerId = cust.customer_id;
+
+                row.innerHTML = `
+            <td>${cust.customer_id}</td>
+            <td>${cust.name}</td>
+            <td>${cust.phone}</td>
+            <td>${cust.items}</td>
+            <td>${cust.amount_paid}</td>
+            <td>${cust.amount_left}</td>
+            <td>
+              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+            </td>
+          `;
+                list.appendChild(row);
+              });
+            } else {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td colspan="7" class="no-data">No customers found</td>`;
+              list.appendChild(row);
+            }
+          })
+          .catch((err) => {
+            document.getElementById("loader").style.display = "none";
+            console.error("Search error:", err);
+            alert("Failed to search. Please check console for error.");
+          });
+      }
+
+      function saveProduct(button) {
+        const row = button.closest("tr");
+        const cells = row.querySelectorAll("td");
+        const productId = row.dataset.customerId;
+
+        const updatedData = {
+          name: cells[1].innerText.trim(),
+          phone: cells[2].innerText.trim(),
+          items_bought: cells[3].innerText.trim(),
+          amountPaid: cells[4].innerText.trim(),
+          amountLeft: cells[5].innerText.trim(),
+        };
+        document.getElementById("loader").style.display = "block";
+        fetch(`${baseUrl}/update-customer/${productId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedData),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none";
+            if (data.status === "success") {
+              alert("Customer updated successfully!");
+              fetchCustomers();
+            } else {
+              alert("Failed to update product.");
+            }
+          })
+          .catch((err) => {
+            document.getElementById("loader").style.display = "none";
+            console.error("Error updating product:", err);
+          });
+      }
+
+      // Fetch customers data
+      function fetchCustomers() {
+        document.getElementById("loader").style.display = "block";
+        fetch(`${baseUrl}/get-customers-on-loan`)
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none";
+            const list = document.getElementById("customer-list");
+            list.innerHTML = "";
+
+            if (data.customers && data.customers.length > 0) {
+              data.customers.forEach((cust) => {
+                const row = document.createElement("tr");
+                row.dataset.customerId = cust.customer_id;
+
+                row.innerHTML = `
+                  <td>${cust.customer_id}</td>
+                  <td>${cust.name}</td>
+                  <td>${cust.phone}</td>
+                  <td>${cust.items_bought}</td>
+                  <td>${cust.amount_paid}</td>
+                  <td>${cust.amount_left}</td>
+                  <td>
+              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+            </td>
+                `;
+                list.appendChild(row);
+              });
+            } else {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td colspan="7" class="no-data">No customers found</td>`;
+              list.appendChild(row);
+            }
+          })
+          .catch((err) => {
+            document.getElementById("loader").style.display = "none";
+            console.error(err);
+          });
+      }
+
+      function editProduct(button) {
+        const row = button.closest("tr");
+        const cells = row.querySelectorAll("td");
+
+        for (let i = 1; i <= 5; i++) {
+          cells[i].contentEditable = true;
+          cells[i].style.backgroundColor = "#ffffdd";
+          cells[i].style.border = "1px solid red";
+        }
+
+        button.innerHTML = '<i class="fa fa-save"></i>';
+        button.setAttribute("onclick", "saveProduct(this)");
+      }
+
+      function deleteProduct(button) {
+        const row = button.closest("tr");
+        const productId = row.dataset.customerId;
+        if (!confirm("Are you sure you want to delete this product?")) return;
+        document.getElementById("loader").style.display = "block";
+        fetch(`${baseUrl}/delete-customer/${productId}`, { method: "DELETE" })
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none";
+            if (data.status === "success") {
+              alert("Customer deleted successfully!");
+              row.remove();
+            } else {
+              alert("Failed to delete product.");
+            }
+          });
+      }
+
+      window.onload = function () {
+        fetchCustomers();
+      };
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+  </body>
+</html>

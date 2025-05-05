@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Finance Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/css/style.css" />
+  </head>
+  <body>
+    <div class="dashboard">
+      <aside class="sidebar">
+        <div class="logo">Finance</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('shop') }}">Shop</a>
+          <a href="{{ url_for('upload') }}">Product Uploading</a>
+          <a href="{{ url_for('customer') }}">Customers</a>
+          <a href="{{ url_for('loan') }}">On Loan</a>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <!-- <header class="header">
+          <input type="text" placeholder="Search here..." />
+          <div class="header-right">
+            <span>🔄</span>
+            <span>🔔</span>
+            <img
+              src="https://randomuser.me/api/portraits/men/32.jpg"
+              alt="Profile"
+            />
+          </div>
+        </header> -->
+
+        <section class="cards" id="dashboard-cards">
+          <div class="card">
+            <h4>Total Products In Karkhana</h4>
+            <h2>📦</h2>
+            <p id="karkhana-amount">0</p>
+          </div>
+          <div class="card">
+            <h4>Total Products In Shop</h4>
+            <h2>📦</h2>
+            <p id="shop-amount">0</p>
+          </div>
+          <div class="card">
+            <h4>Total Customers</h4>
+            <h2>👥</h2>
+            <p id="customers-amount">0</p>
+          </div>
+          <div class="card">
+            <h4>Loan Money</h4>
+            <h2>🪙</h2>
+            <p id="loan-amount">0</p>
+          </div>
+        </section>
+        <div class="loader" id="loader" style="display: none"></div>
+
+        <script>
+          const baseUrl = window.location.origin;
+          function fetchDashboardData() {
+            document.getElementById("loader").style.display = "block";
+            fetch(`${baseUrl}/get-dashboard-data`)
+              .then((res) => res.json())
+              .then((data) => {
+                document.getElementById("loader").style.display = "none";
+                const dashboard = data.dashboard_data;
+
+                document.getElementById(
+                  "karkhana-amount"
+                ).innerText = `${dashboard.total_products_in_karkhana} Items`;
+
+                document.getElementById(
+                  "shop-amount"
+                ).innerText = `${dashboard.total_products_in_shop} Items`;
+
+                document.getElementById(
+                  "customers-amount"
+                ).innerText = `${dashboard.total_customers} Customers`;
+
+                document.getElementById(
+                  "loan-amount"
+                ).innerText = `${dashboard.loan_money}`;
+              })
+              .catch((err) => {
+                document.getElementById("loader").style.display = "none";
+                console.error("Error fetching dashboard data:", err);
+              });
+          }
+
+          fetchDashboardData();
+        </script>
+
+        <section class="cards">
+          <div class="card">
+            <a href="{{ url_for('upload') }}">
+              <h4>Add Product</h4>
+              <h2>➕</h2>
+              <p>Create new products</p>
+            </a>
+          </div>
+          <div class="card">
+            <a href="{{ url_for('inventory') }}">
+              <h4>View Products</h4>
+              <h2>📦</h2>
+              <p>See all products</p>
+            </a>
+          </div>
+          <div class="card">
+            <a href="{{ url_for('customer') }}">
+              <h4>View Customers</h4>
+              <h2>👥</h2>
+              <p>Manage your customers</p>
+            </a>
+          </div>
+          <div class="card">
+            <a href="{{ url_for('loan') }}">
+              <h4>View OnLoan Customers</h4>
+              <h2>👥</h2>
+              <p>Manage your customers with Loan</p>
+            </a>
+          </div>
+        </section>
+
+        <section class="charts">
+          <div class="chart-box">AP and AR Balance (Chart)</div>
+          <div class="chart-box">Income Budget (Chart)</div>
+          <div class="chart-box">Expenses Budget (Chart)</div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Move Inventory to Shop</title>
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      button {
+        padding: 8px 15px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Move Inventory to Shop</h1>
+
+    <!-- Inventory Table -->
+    <table id="inventory-table">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Product ID</th>
+          <th>Title</th>
+          <th>Quantity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data will be populated here -->
+      </tbody>
+    </table>
+
+    <button onclick="moveInventoryToShop()">Move Selected Items to Shop</button>
+
+    <script>
+      const baseUrl = window.location.origin;
+
+      window.onload = function () {
+        fetchProducts();
+      };
+
+      function fetchProducts() {
+        fetch(`${baseUrl}/get-products?karkhana=karkhana`)
+          .then((res) => res.json())
+          .then((data) => {
+            const tableBody = document.querySelector("#inventory-table tbody");
+            tableBody.innerHTML = ""; // clear existing rows
+
+            if (data.products && data.products.length > 0) {
+              data.products.forEach((product) => {
+                const row = document.createElement("tr");
+                row.setAttribute("data-product-id", product.id);
+                row.innerHTML = `
+                  <td><input type="checkbox" class="select-item" /></td>
+                  <td>${product.id}</td>
+                  <td>${product.title}</td>
+                  <td>${product.quantity}</td>
+                `;
+                tableBody.appendChild(row);
+              });
+            } else {
+              const row = document.createElement("tr");
+              row.innerHTML = `<td colspan="4">No inventory items found.</td>`;
+              tableBody.appendChild(row);
+            }
+          })
+          .catch((err) => console.error("Error fetching products:", err));
+      }
+
+      function moveInventoryToShop() {
+        const selectedItems = [];
+        document
+          .querySelectorAll(".select-item:checked")
+          .forEach((checkbox) => {
+            const row = checkbox.closest("tr");
+            selectedItems.push({
+              product_id: row.getAttribute("data-product-id"),
+              title: row.cells[2].innerText,
+              quantity: row.cells[3].innerText,
+            });
+          });
+
+        if (selectedItems.length === 0) {
+          alert("Please select at least one item.");
+          return;
+        }
+
+        fetch(`${baseUrl}/move-inventory-to-shop`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ items: selectedItems }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "success") {
+              alert("Items moved to shop successfully!");
+              fetchProducts(); // Refresh table
+            } else {
+              alert("Error: " + data.message);
+            }
+          })
+          .catch((err) => console.error("Move error:", err));
+      }
+    </script>
+  </body>
+</html>

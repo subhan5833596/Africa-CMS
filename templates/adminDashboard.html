@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Finance Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/css/style.css" />
+  </head>
+  <body>
+    <div class="dashboard">
+      <aside class="sidebar">
+        <div class="logo">Finance</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('customer') }}">Customers</a>
+          <a href="{{ url_for('loan') }}">Loan</a>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <header class="header">
+          <input type="text" placeholder="Search here..." />
+          <div class="header-right">
+            <span>🔄</span>
+            <span>🔔</span>
+            <img
+              src="https://randomuser.me/api/portraits/men/32.jpg"
+              alt="Profile"
+            />
+          </div>
+        </header>
+
+        <section class="cards" id="dashboard-cards">
+          <div class="card">
+            <h4>Total Inventory</h4>
+            <h2>💰</h2>
+            <p id="inventory-amount">$0</p>
+          </div>
+          <div class="card">
+            <h4>Total Customers</h4>
+            <h2>💸</h2>
+            <p id="customers-amount">$0</p>
+          </div>
+          <div class="card">
+            <h4>Loan Money</h4>
+            <h2>🪙</h2>
+            <p id="loan-amount">$0</p>
+          </div>
+          <div class="card">
+            <h4>Today's Sale</h4>
+            <h2>📈</h2>
+            <p id="sale-amount">$0</p>
+          </div>
+        </section>
+
+        <script>
+          const baseUrl = window.location.origin;
+          function fetchDashboardData() {
+            fetch(`${baseUrl}/get-admin-dashboard-data`)
+              .then((res) => res.json())
+              .then((data) => {
+                const dashboard = data.dashboard_data;
+                document.getElementById(
+                  "inventory-amount"
+                ).innerText = `$${dashboard.total_inventory}`;
+                document.getElementById(
+                  "customers-amount"
+                ).innerText = `${dashboard.total_customers} Customers`;
+                document.getElementById(
+                  "loan-amount"
+                ).innerText = `$${dashboard.loan_money}`;
+                document.getElementById(
+                  "sale-amount"
+                ).innerText = `$${dashboard.todays_sale}`;
+              })
+              .catch((err) =>
+                console.error("Error fetching dashboard data:", err)
+              );
+          }
+
+          fetchDashboardData();
+        </script>
+
+        <section class="cards">
+          <div class="card">
+            <a href="{{ url_for('inventory') }}">
+              <h4>View Products</h4>
+              <h2>📦</h2>
+              <p>See all products</p>
+            </a>
+          </div>
+          <div class="card">
+            <a href="{{ url_for('customer') }}">
+              <h4>View Customers</h4>
+              <h2>👥</h2>
+              <p>Manage your customers</p>
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

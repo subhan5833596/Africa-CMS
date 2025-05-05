@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Uploading</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/css/style.css" />
+    <style>
+      .main-content {
+        flex: 1;
+        padding: 20px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header input {
+        width: 300px;
+        padding: 10px;
+        border-radius: 20px;
+        border: 1px solid #ccc;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .header-right img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+        font-size: 28px;
+      }
+
+      .upload-form {
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      .input-group label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 8px;
+        color: #2c3e50;
+      }
+
+      .input-field {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background-color: #f8f8f8;
+      }
+
+      .input-field:focus {
+        border-color: #4285f4;
+        background-color: #fff;
+        outline: none;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px;
+        background-color: #4285f4;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      .btn:hover {
+        background-color: #00c3ff;
+      }
+
+      .status-text {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 16px;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 100%;
+          height: auto;
+          position: relative;
+        }
+
+        .main-content {
+          margin-left: 0;
+        }
+
+        .upload-form {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <!-- You missed this wrapper -->
+      <aside class="sidebar">
+        <div class="logo">Finance</div>
+        <nav>
+          <a href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('shop') }}">Shop</a>
+          <a href="{{ url_for('upload') }}">Product Uploading</a>
+          <a href="{{ url_for('customer') }}">Customers</a>
+          <a href="{{ url_for('loan') }}">On Loan</a>
+        </nav>
+      </aside>
+
+      <div class="main-content">
+        <h1>Product Uploading</h1>
+        <div class="upload-form">
+          <div class="input-group">
+            <label for="product-title">Title</label>
+            <input
+              type="text"
+              class="input-field"
+              id="product-title"
+              placeholder="Enter product title"
+            />
+          </div>
+          <div class="input-group">
+            <label for="product-price">Price</label>
+            <input
+              type="number"
+              class="input-field"
+              id="product-price"
+              placeholder="Enter price"
+            />
+          </div>
+          <div class="input-group">
+            <label for="product-quantity">Quantity</label>
+            <input
+              type="number"
+              class="input-field"
+              id="product-quantity"
+              placeholder="Enter quantity"
+            />
+          </div>
+          <div class="input-group">
+            <label for="product-size">Size</label>
+            <input
+              type="text"
+              class="input-field"
+              id="product-size"
+              placeholder="Enter size"
+            />
+          </div>
+          <div class="input-group">
+            <label for="product-source">Select Source</label>
+            <select class="input-field" id="product-source">
+              <option value="karkhana">Karkhana</option>
+              <option value="shop">Shop</option>
+            </select>
+          </div>
+
+          <button class="btn" onclick="uploadProduct()">Upload</button>
+          <p id="upload-status" class="status-text"></p>
+        </div>
+      </div>
+    </div>
+    <!-- Close .dashboard -->
+    <div class="loader" id="loader" style="display: none"></div>
+
+    <script>
+      const baseUrl = window.location.origin;
+      function uploadProduct() {
+        const source = document.getElementById("product-source").value;
+        const title = document.getElementById("product-title").value;
+        const price = document.getElementById("product-price").value;
+        const quantity = document.getElementById("product-quantity").value;
+        const size = document.getElementById("product-size").value;
+
+        if (!source || !title || !price || !quantity || !size) {
+          alert("⚠️ Please fill all fields.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("source", source);
+        formData.append("title", title);
+        formData.append("price", price);
+        formData.append("quantity", quantity);
+        formData.append("size", size);
+
+        document.getElementById("loader").style.display = "block";
+
+        fetch(`${baseUrl}/add-product`, {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none";
+
+            if (data.status === "success") {
+              alert("Product uploaded successfully!");
+              console.log("New Product ID:", data.product_id);
+              document.getElementById("product-title").value = "";
+              document.getElementById("product-price").value = "";
+              document.getElementById("product-quantity").value = "";
+              document.getElementById("product-size").value = "";
+            } else {
+              alert("Product Upload failed.");
+            }
+          })
+          .catch((err) => {
+            document.getElementById("loader").style.display = "none";
+            alert("Error uploading product.");
+            console.error(err);
+          });
+      }
+    </script>
+  </body>
+</html>
