@@ -5,7 +5,7 @@ from flask_cors import CORS
 import cloudinary
 import cloudinary.uploader
 import logging
-import uuid
+import uuid , json
 
 # === Flask App Config ===
 app = Flask(__name__)
@@ -18,9 +18,23 @@ cloudinary.config(
     api_key='396858126569313',    # 🔁 Replace with your API key
     api_secret='qHrrlf7uLApRR7nyp5PlfXKaiZ4'  # 🔁 Replace with your API secret
 )
+SERVICE_ACCOUNT_INFO = json.loads("""
+{
+  "type": "service_account",
+  "project_id": "africa-457409",
+  "private_key_id": "4544f81742344928ebb7ec5dc023f8840a1462f3",
+  "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDINKklNHqJF0qG\\nGU9IYCIXP3F1bHrZCkLaYtWglPOS2HKQ0qnjKSNxX1NMWDRU1KqYotWnY0obbpUd\\nmXiXiOFf1uhuDtzFfXzNd94wF1owJapzol4amRMV+5Zlm/XAB5F4Cu2I+MAumV+P\\nwiUHp6ff8rPz3aXAp+syOzW3eZCuiN0ZXFDgPlVj/dRUEFka8cxgFqdpWY4AUV15\\nBnVifEOh71ColsS7DMSelQ7S3XNAjYo8OaGU1D3AsjS9ZonHKpfkximSl4TLvNrS\\nYD6fdQXn1/GfBV/ucOq3fI7wVWun/Xkd9LhOLP0X5Id1Onw+GLbgSXTE5bEhv07C\\nNvKlswLzAgMBAAECggEASzcJkvo3zPhMnbu1fwXq2NwTdp+WOaMywZQfGRDMv48E\\n36bdf4PNloLPKx/6LSKmouiOJzBUv6CYcgHd/eRFc7msIekAhUujTxgpB91GG0+T\\nTZUjEJAQzRHzi2H//jB5tOU6H1sA7KDfd4VjXxBcL/UhKU3Mv2f2oyz+fds0gXUs\\nf52uoZy4iLWGyj5DSsDNrcmTlfi4MJ1U7YdjU5S1ZViC7Z9Es9Nw/GGkPObejZkL\\nUuAyp7xdymK9GSpqIBL4iiy0Qm+odLnsye85WKaxaCf7lQKNeUO5mgWkVkAqkiMt\\nRIfRwvHRlIYvYabsZSh/vJqb6er0Nglso1GQr91qrQKBgQDs3fJsX7ruJZ/wch36\\njyIpRwEA35bKbiEY604UTprafS6+mvoiyXv1T3IBH9DwtZ/64pt2SBUfIsQIPdCH\\ne4fUPGdUcW6ZDxNYVerLYkhMhtr7K5XOnLcX0ose0RBgzX4jtbrbfZxG1k+v8NQS\\n/kZTlPKGJudsZEqZy4/2rgrtnQKBgQDYYJ0c5lTfktsElGWmewIDZzKdJhUxZ+g/\\n6EtGgePYDV/lzuSAWTyftis22MOug4Imd4qYfoDQE9DjwPxPsvrcRFGaPgd1N891\\nytmYW+oM0yx4ocFBUCIMhPjw8SriZN0X4380gPeOx2C4eOG5WE8Qe6XH3Z8hfNr2\\nstk+zCsVzwKBgQDdjpk0X7LlERJygPujo4CrpXu9ymYsgSi6O1c0TXYxSoiPxzyT\\nj21APwh/Hrh8fxbeQFp0H+aJ0iYVI2TLZXPexIVOii+OQXix1uOhTBQeaMGp0NH2\\nicYFJW317E3qjiwf0NuwdOTZqZquEpD8FxXHFnpnmzo6u/C/vJWzgoY8TQKBgQCw\\nRdT4zDPsh2jhzDsbay5ys0mqeHHfc/Tiy003vW1uf0bWorvIS+p1eiSuY9zWeNA4\\noj5IiRZLbTlJsdha3UY813NbIplUxwi9v2mRE6ASnp6mD7CukqeKZ3GeZ/o1wVHU\\nukLQ9Re4O3jyD5hkNCsFFJYzwrp2v45qV71fyVh4RQKBgDA8VJ+BlT1FF4ca0L8J\\nLXw+mQcLsOW8aKoRW9gYqEWPlsh+/vdF6D1/cRZMDjBpW9J4AjbXIGQd1TRvR7gf\\n1jnRopLJcdj7aVE3RAoLH9DtyJX4KOSSw/+SD/N4a+8kjObYJ6we3Z6hJz4eJ3fM\\nR4IpfQMkyv2rMBTOZkiWuAti\\n-----END PRIVATE KEY-----\\n",
+  "client_email": "africaapi@africa-457409.iam.gserviceaccount.com",
+  "client_id": "113920774812407890212",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/africaapi%40africa-457409.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+""")
 
-SERVICE_ACCOUNT_FILE = 'credential.json'
-SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 LOGIN_SPREADSHEET_ID = '1pQJ8-xFMfzVG19w9fFP-3Cb29k379oGXIVRm0bk1kI8'  # New sheet ID for login
 INVENTORY_SPREADSHEET_ID = '1jJTfIlE_m-b8WMag6uXjgLniOeVKmiCg6ur577c0aDs'  # New sheet ID for karkhana
 SHOP_SPREADSHEET_ID = '15T6weqATatNOE4gg6m2zP2L02eCYVOqpJJOxNQWnuLI'  # New sheet ID for shop
@@ -28,9 +42,7 @@ CUSTOMER_SPREADSHEET_ID = '1hFi9-Sp8KcE1jXDC9-1CsbBL98VqFvXOrSMxJesa0_c'
 SHEET_RANGE = 'Sheet1!A1'
 
 # === Auth ===
-creds = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES
-)
+creds = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=SCOPES)
 sheet_service = build('sheets', 'v4', credentials=creds)
 
 # Route for Dashboard (Only accessible if logged in)
