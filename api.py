@@ -9,7 +9,7 @@ import uuid , json
 
 # === Flask App Config ===
 app = Flask(__name__)
-app.secret_key = 'your_secret_keys'  # Replace with a strong secret key to sign session data
+app.secret_key = 'Africa'  # Replace with a strong secret key to sign session data
 CORS(app)
 
 # === Cloudinary Config ===
@@ -961,7 +961,7 @@ def move_inventory_to_shop():
 
 # === Start Flask App ===
 if __name__ == '__main__':
-    app.run('0.0.0.0',debug=True, port=5000)
+    app.run(debug=True)
 
 
 
