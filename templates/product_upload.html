@@ -126,7 +126,7 @@
         <div class="logo">Finance</div>
         <nav>
           <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('inventory') }}">Gudaam</a>
           <a href="{{ url_for('shop') }}">Shop</a>
           <a href="{{ url_for('upload') }}">Product Uploading</a>
           <a href="{{ url_for('customer') }}">Customers</a>
@@ -165,6 +165,15 @@
             />
           </div>
           <div class="input-group">
+            <label for="product-unit">Quantity Unit</label>
+            <input
+              type="text"
+              class="input-field"
+              id="product-unit"
+              placeholder="Enter quantity unit"
+            />
+          </div>
+          <div class="input-group">
             <label for="product-size">Size</label>
             <input
               type="text"
@@ -196,9 +205,10 @@
         const title = document.getElementById("product-title").value;
         const price = document.getElementById("product-price").value;
         const quantity = document.getElementById("product-quantity").value;
+        const unit = document.getElementById("product-unit").value;
         const size = document.getElementById("product-size").value;
 
-        if (!source || !title || !price || !quantity || !size) {
+        if (!source || !title || !price || !quantity || !size || !unit) {
           alert("⚠️ Please fill all fields.");
           return;
         }
@@ -208,6 +218,7 @@
         formData.append("title", title);
         formData.append("price", price);
         formData.append("quantity", quantity);
+        formData.append("unit", unit);
         formData.append("size", size);
 
         document.getElementById("loader").style.display = "block";
@@ -226,6 +237,7 @@
               document.getElementById("product-title").value = "";
               document.getElementById("product-price").value = "";
               document.getElementById("product-quantity").value = "";
+              document.getElementById("product-unit").value = "";
               document.getElementById("product-size").value = "";
             } else {
               alert("Product Upload failed.");

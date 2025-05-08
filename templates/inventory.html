@@ -92,7 +92,7 @@
         <div class="logo">Finance</div>
         <nav>
           <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('inventory') }}">Gudaam</a>
           <a href="{{ url_for('shop') }}">Shop</a>
           <a href="{{ url_for('upload') }}">Product Uploading</a>
           <a href="{{ url_for('customer') }}">Customers</a>
@@ -110,7 +110,7 @@
             margin-bottom: 20px;
           "
         >
-          <h1>KARKHANA</h1>
+          <h1>GUDAAM</h1>
           <div style="display: flex; gap: 10px">
             <input
               type="text"
@@ -131,7 +131,7 @@
           <div class="card">
             <h4>Total Products</h4>
             <h2 id="total-products">0</h2>
-            <p>Number of products in karkhana</p>
+            <p>Number of products in Gudaam</p>
           </div>
           <div class="card">
             <h4>Low Stock Alerts</h4>
@@ -147,6 +147,7 @@
                 <th>Product Name</th>
                 <th>Price</th>
                 <th>Quantity</th>
+                <th>Unit</th>
                 <th>Size</th>
                 <th>Actions</th>
               </tr>
@@ -165,6 +166,29 @@
         fetchProducts();
       };
 
+      function updateQty(button, type) {
+        const row = button.closest("tr");
+        const input = row.querySelector("#change-input");
+        const currentQtyElem = row.querySelector(".current-qty");
+
+        let currentQty = parseInt(currentQtyElem.innerText);
+        let change = parseInt(input.value);
+
+        if (isNaN(change)) {
+          alert("Enter a valid number.");
+          return;
+        }
+
+        let newQty = type === "add" ? currentQty + change : currentQty - change;
+        if (newQty < 0) newQty = 0;
+
+        // Update frontend display
+        currentQtyElem.innerText = newQty;
+
+        // Optional: Clear input after action
+        input.value = "";
+      }
+
       function fetchProducts() {
         document.getElementById("loader").style.display = "block";
         fetch(`${baseUrl}/get-products?karkhana=karkhana`)
@@ -182,15 +206,16 @@
                 const row = document.createElement("tr");
                 row.setAttribute("data-id", product.id);
                 row.innerHTML = `
-            <td>${product.title}</td>
-            <td>${product.price}</td>
-            <td>${product.quantity}</td>
-            <td>${product.size}</td>
-            <td>
-              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-            </td>
-          `;
+                        <td>${product.title}</td>
+                        <td>${product.price}</td>
+                        <td>${product.quantity}</td>
+                        <td>${product.unit}</td>
+                        <td>${product.size}</td>
+                        <td>
+                          <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                          <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+                        </td>
+                      `;
                 productList.appendChild(row);
               });
 
@@ -236,15 +261,16 @@
                 const row = document.createElement("tr");
                 row.setAttribute("data-id", product.id);
                 row.innerHTML = `
-                  <td>${product.title}</td>
-                  <td>${product.price}</td>
-                  <td>${product.quantity || 0}</td>
-                  <td>${product.size || "-"}</td>
-                  <td>
-                    <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-                    <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-                  </td>
-                `;
+                              <td>${product.title}</td>
+                              <td>${product.price}</td>
+                              <td>${product.quantity || 0}</td>
+                              <td>${product.unit || "-"}</td>
+                              <td>${product.size || "-"}</td>
+                              <td>
+                                <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                                <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+                              </td>
+                            `;
                 productList.appendChild(row);
               });
             } else {
@@ -266,6 +292,19 @@
         const cells = row.querySelectorAll("td");
 
         for (let i = 0; i <= 4; i++) {
+          if (i === 2) {
+            const currentQty = parseInt(cells[i].innerText);
+            cells[i].innerHTML = `
+          <div style="align-items: center; gap: 8px;">
+            <span style="font-size: 14px;">Current: <span class="current-qty">${currentQty}</span></span>
+            <button onclick="updateQty(this, 'add')" style="padding: 4px 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">+</button>
+            <input type="number" id="change-input" placeholder="0" style="width: 60px; padding: 4px;" />
+            <button onclick="updateQty(this, 'subtract')" style="padding: 4px 8px; background-color: #f44336; color: white; border: none; border-radius: 4px;">-</button>
+          </div>
+        `;
+            cells[i].contentEditable = false; // disable contentEditable here
+            cells[i].style.backgroundColor = "#ffffdd";
+          }
           cells[i].contentEditable = true;
           cells[i].style.backgroundColor = "#ffffdd";
         }
@@ -282,8 +321,9 @@
         const updatedData = {
           title: cells[0].innerText.trim(),
           price: cells[1].innerText.trim(),
-          quantity: cells[2].innerText.trim(),
-          size: cells[3].innerText.trim(),
+          quantity: parseInt(row.querySelector(".current-qty").innerText), // ✅ Only number
+          unit: cells[3].innerText.trim(),
+          size: cells[4].innerText.trim(),
         };
         document.getElementById("loader").style.display = "block";
         fetch(`${baseUrl}/update-product/${productId}?karkhana=karkhana`, {
@@ -298,7 +338,24 @@
             document.getElementById("loader").style.display = "none";
             if (data.status === "success") {
               alert("Product updated successfully!");
-              fetchProducts();
+
+              const row = button.closest("tr");
+              const cells = row.querySelectorAll("td");
+
+              // Reset quantity cell
+              const qtyElem = row.querySelector(".current-qty");
+              const finalQty = qtyElem ? qtyElem.innerText : cells[2].innerText;
+              cells[2].innerHTML = finalQty;
+
+              // Reset all cells editable false + remove background
+              for (let i = 0; i <= 4; i++) {
+                cells[i].contentEditable = false;
+                cells[i].style.backgroundColor = "";
+              }
+
+              // Change save icon back to edit
+              button.innerHTML = '<i class="fa fa-pen"></i>';
+              button.setAttribute("onclick", "editProduct(this)");
             } else {
               alert("Failed to update product.");
             }

@@ -110,30 +110,48 @@
       /* Table styles */
       table {
         width: 100%;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         margin-top: 20px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      table thead {
+        background: linear-gradient(to right, #00c3ff, #007bff);
+        color: white;
       }
 
       table th,
       table td {
-        padding: 12px;
+        padding: 14px 16px;
         text-align: left;
-        border-bottom: 1px solid #ddd;
+        font-size: 15px;
+        border-bottom: 1px solid #000000;
       }
 
-      table th {
-        background-color: #00c3ff;
-        color: white;
+      table tbody tr:hover {
+        background-color: #f9f9f9;
       }
 
-      table tr:hover {
-        background-color: #f1f1f1;
+      table th:first-child,
+      table td:first-child {
+        border-top-left-radius: 12px;
+      }
+
+      table th:last-child,
+      table td:last-child {
+        border-top-right-radius: 12px;
       }
 
       table td {
-        font-size: 16px;
+        color: #333;
       }
-
+      .subtr {
+        border-bottom: 1px solid #eeeeee;
+      }
       /* Optional: Add a no data found message style */
       .no-data {
         text-align: center;
@@ -259,7 +277,7 @@
         <div class="logo">Finance</div>
         <nav>
           <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('inventory') }}">Karkhana</a>
+          <a href="{{ url_for('inventory') }}">Gudaam</a>
           <a href="{{ url_for('shop') }}">Shop</a>
           <a href="{{ url_for('upload') }}">Product Uploading</a>
           <a href="{{ url_for('customer') }}">Customers</a>
@@ -384,6 +402,7 @@
                       <th>Item Title</th>
                       <th>Quantity</th>
                       <th>Size</th>
+                      <th>Price</th>
                       <th>Action</th>
                     </tr>
                   </thead>
@@ -392,7 +411,15 @@
 
                 <!-- Payment Info -->
                 <div class="row mb-3">
-                  <div class="col-md-6">
+                  <div class="col-md-4">
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="amountTotal"
+                      placeholder="Total amount"
+                    />
+                  </div>
+                  <div class="col-md-4">
                     <input
                       type="number"
                       class="form-control"
@@ -400,7 +427,7 @@
                       placeholder="Amount Paid"
                     />
                   </div>
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <input
                       type="number"
                       class="form-control"
@@ -482,42 +509,57 @@
                 return;
               }
 
-              // Add row to table
-              // Add row to table
-              const row = `
-              <tr data-id="${product.id}" data-max="${product.quantity}">
-                <td>${product.title}</td>
-                <td>
-                  <input type="number" 
-                        class="form-control quantity" 
-                        value="${product.quantity}" 
-                        min="1" 
-                        max="${product.quantity}">
-                </td>
-                <td>${product.size}</td>
-                <td><button class="btn btn-danger btn-sm deleteRow">Delete</button></td>
-              </tr>
-            `;
+              // Create new row element
+              const row = $(`
+    <tr data-id="${product.id}" data-max="${product.quantity}" data-price="${
+                product.price
+              }">
+      <td>${product.title}</td>
+      <td>
+        <input type="number" 
+               class="form-control quantity-input" 
+               value="${product.quantity}" 
+               min="1" 
+               max="${product.quantity}">
+      </td>
+      <td>${product.size}</td>
+      <td>
+        <input type="number" 
+               class="form-control total-input" 
+               value="${product.price * product.quantity}" 
+               readonly>
+      </td>
+      <td>
+        <button class="btn btn-danger btn-sm deleteRow">Delete</button>
+      </td>
+    </tr>
+  `);
+
+              // Append to table
               $("#itemTable tbody").append(row);
 
-              // Add validation after adding the row
-              $("#itemTable tbody")
-                .find(".quantity")
-                .last()
-                .on("input", function () {
-                  const $input = $(this);
-                  const maxQty = parseInt($input.closest("tr").data("max"));
-                  const enteredQty = parseInt($input.val());
+              // Quantity input listener for live total calculation + validation
+              row.find(".quantity-input").on("input", function () {
+                const $input = $(this);
+                const $tr = $input.closest("tr");
+                const maxQty = parseInt($tr.data("max"));
+                const price = parseFloat($tr.data("price"));
+                let qty = parseInt($input.val());
 
-                  if (enteredQty > maxQty) {
-                    alert(
-                      "Quantity cannot exceed available stock (" + maxQty + ")"
-                    );
-                    $input.val(maxQty); // revert to max allowed
-                  }
-                });
+                if (qty > maxQty) {
+                  alert(
+                    "Quantity cannot exceed available stock (" + maxQty + ")"
+                  );
+                  qty = maxQty;
+                  $input.val(qty);
+                }
 
-              $("#itemSelect").val(null).trigger("change"); // Clear select2 after adding item
+                // Update total field
+                $tr.find(".total-input").val((qty * price).toFixed(2));
+              });
+
+              // Clear select2 input after adding
+              $("#itemSelect").val(null).trigger("change");
             });
 
             // Delete row handler
@@ -534,14 +576,20 @@
               return;
             }
 
-            const items = [];
+            const items = {};
+            let counter = 1;
+
             $("#itemTable tbody tr").each(function () {
-              items.push({
-                id: $(this).data("id"),
-                title: $(this).find("td").eq(0).text(),
-                quantity: $(this).find(".quantity").val(),
-                size: $(this).find("td").eq(2).text(),
-              });
+              const title = $(this).find("td").eq(0).text();
+              const quantity = $(this).find(".quantity-input").val();
+              const size = $(this).find("td").eq(2).text();
+
+              items[`item${counter}`] = {
+                title,
+                quantity: parseInt(quantity),
+                size,
+              };
+              counter++;
             });
 
             const data = {
@@ -549,6 +597,7 @@
               location: location,
               phone: $("#customerPhone").val(),
               items: items,
+              amountTotal: $("#amountTotal").val(),
               amountPaid: $("#amountPaid").val(),
               amountLeft: $("#amountLeft").val(),
             };
@@ -575,13 +624,24 @@
 
         <!-- Customer Table -->
         <div class="row">
-          <table>
+          <table
+            border="1"
+            cellpadding="8"
+            cellspacing="0"
+            style="width: 100%; border-collapse: collapse"
+          >
             <thead>
               <tr>
                 <th>Customer ID</th>
                 <th>Name</th>
                 <th>Phone</th>
-                <th>Items Bought</th>
+
+                <th>Product</th>
+                <th>Size</th>
+                <th>Qty</th>
+                <th>Price</th>
+
+                <th>Total Amount</th>
                 <th>Amount Paid</th>
                 <th>Amount Left</th>
                 <th>Action</th>
@@ -698,26 +758,67 @@
 
             if (data.customers && data.customers.length > 0) {
               data.customers.forEach((cust) => {
-                const row = document.createElement("tr");
-                row.dataset.customerId = cust.customer_id;
+                let itemsRows = "";
 
-                row.innerHTML = `
-                  <td>${cust.customer_id}</td>
-                  <td>${cust.name}</td>
-                  <td>${cust.phone}</td>
-                  <td>${cust.items_bought}</td>
-                  <td>${cust.amount_paid}</td>
-                  <td>${cust.amount_left}</td>
-                  <td>
-              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-            </td>
+                try {
+                  const fixed = cust.items_bought
+                    .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+                    .replace(/'/g, '"');
+                  const itemsObj = JSON.parse(fixed);
+
+                  const itemsArray = Object.values(itemsObj);
+
+                  // handle each item as its own row
+                  itemsArray.forEach((item, index) => {
+                    const row = document.createElement("tr");
+                    if (index === 0) {
+                      row.innerHTML = `
+                  <td rowspan="${itemsArray.length}">${cust.customer_id}</td>
+                  <td rowspan="${itemsArray.length}">${cust.name}</td>
+                  <td rowspan="${itemsArray.length}">${cust.phone}</td>
+                  <td class='subtr'>${item.title || "-"}</td>
+                  <td class='subtr'>${item.size || "-"}</td>
+                  <td class='subtr'>${item.quantity || "-"}</td>
+                  <td class='subtr'>${item.price || "-"}</td>
+                  <td rowspan="${itemsArray.length}">${cust.amount_total}</td>
+                  <td rowspan="${itemsArray.length}">${cust.amount_paid}</td>
+                  <td rowspan="${itemsArray.length}">${cust.amount_left}</td>
+                  <td rowspan="${itemsArray.length}">
+                    <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                    <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+                  </td>
                 `;
-                list.appendChild(row);
+                    } else {
+                      row.innerHTML = `
+                  <td>${item.title || "-"}</td>
+                  <td>${item.size || "-"}</td>
+                  <td>${item.quantity || "-"}</td>
+                  <td>${item.price || "-"}</td>
+                `;
+                    }
+                    list.appendChild(row);
+                  });
+                } catch (e) {
+                  const row = document.createElement("tr");
+                  row.innerHTML = `
+              <td>${cust.customer_id}</td>
+              <td>${cust.name}</td>
+              <td>${cust.phone}</td>
+              <td colspan="4" style="color:red;">Invalid items format</td>
+              <td>${cust.amount_total}</td>
+              <td>${cust.amount_paid}</td>
+              <td>${cust.amount_left}</td>
+              <td>
+                <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+              </td>
+            `;
+                  list.appendChild(row);
+                }
               });
             } else {
               const row = document.createElement("tr");
-              row.innerHTML = `<td colspan="7" class="no-data">No customers found</td>`;
+              row.innerHTML = `<td colspan="11" class="no-data">No customers found</td>`;
               list.appendChild(row);
             }
           })
