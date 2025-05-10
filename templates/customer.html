@@ -458,11 +458,6 @@
 
         <script>
           const baseUrl1 = window.location.origin;
-          let products = [
-            { id: 1, title: "Item A", quantity: 5, size: "M" },
-            { id: 2, title: "Item B", quantity: 2, size: "L" },
-            { id: 3, title: "Item C", quantity: 10, size: "XL" },
-          ];
           document
             .getElementById("locationSelect")
             .addEventListener("change", function () {
@@ -511,29 +506,29 @@
 
               // Create new row element
               const row = $(`
-    <tr data-id="${product.id}" data-max="${product.quantity}" data-price="${
-                product.price
-              }">
-      <td>${product.title}</td>
-      <td>
-        <input type="number" 
-               class="form-control quantity-input" 
-               value="${product.quantity}" 
-               min="1" 
-               max="${product.quantity}">
-      </td>
-      <td>${product.size}</td>
-      <td>
-        <input type="number" 
-               class="form-control total-input" 
-               value="${product.price * product.quantity}" 
-               readonly>
-      </td>
-      <td>
-        <button class="btn btn-danger btn-sm deleteRow">Delete</button>
-      </td>
-    </tr>
-  `);
+                <tr data-id="${product.id}" data-max="${
+                product.quantity
+              }" data-price="${product.price}">
+                  <td>${product.title}</td>
+                  <td>
+                    <input type="number" 
+                          class="form-control quantity-input" 
+                          value="${product.quantity}" 
+                          min="1" 
+                          max="${product.quantity}">
+                  </td>
+                  <td>${product.size}</td>
+                  <td>
+                    <input type="number" 
+                          class="form-control total-input" 
+                          value="${product.price * product.quantity}" 
+                          >
+                  </td>
+                  <td>
+                    <button class="btn btn-danger btn-sm deleteRow">Delete</button>
+                  </td>
+                </tr>
+              `);
 
               // Append to table
               $("#itemTable tbody").append(row);
@@ -566,6 +561,56 @@
             $(document).on("click", ".deleteRow", function () {
               $(this).closest("tr").remove();
             });
+
+            function updateTotals() {
+              let totalAmount = 0;
+              $("#itemTable tbody .total-input").each(function () {
+                totalAmount += parseFloat($(this).val()) || 0;
+              });
+
+              const paidAmount = parseFloat($("#amountPaid").val()) || 0;
+              const amountLeft = totalAmount - paidAmount;
+
+              $("#amountTotal").val(totalAmount.toFixed(2));
+              $("#amountLeft").val(amountLeft.toFixed(2));
+            }
+
+            // ✅ When price or quantity changes
+            $(document).on(
+              "input",
+              ".quantity-input, .total-input",
+              function () {
+                const $tr = $(this).closest("tr");
+                const qty = parseInt($tr.find(".quantity-input").val()) || 0;
+                const pricePerItem = parseFloat($tr.data("price")) || 0;
+
+                // If quantity is updated, set total price again
+                if ($(this).hasClass("quantity-input")) {
+                  $tr.find(".total-input").val((qty * pricePerItem).toFixed(2));
+                }
+
+                updateTotals();
+              }
+            );
+
+            // ✅ When paid amount changes
+            $("#amountPaid").on("input", function () {
+              updateTotals();
+            });
+
+            $("#amountPaid").on("input", function () {
+              const paidAmount = parseFloat($(this).val()) || 0;
+              const totalAmount = parseFloat($("#amountTotal").val()) || 0;
+
+              if (paidAmount > totalAmount) {
+                alert("Paid amount cannot be greater than total amount!");
+                $(this).val(totalAmount);
+              }
+
+              // Update left amount
+              const amountLeft = totalAmount - (parseFloat($(this).val()) || 0);
+              $("#amountLeft").val(amountLeft.toFixed(2));
+            });
           });
 
           function submitForm() {
@@ -578,30 +623,44 @@
 
             const items = {};
             let counter = 1;
+            let totalAmount = 0;
 
             $("#itemTable tbody tr").each(function () {
+              const id = $(this).data("id");
               const title = $(this).find("td").eq(0).text();
               const quantity = $(this).find(".quantity-input").val();
               const size = $(this).find("td").eq(2).text();
+              const price = parseFloat($(this).find(".total-input").val());
 
               items[`item${counter}`] = {
+                id,
                 title,
                 quantity: parseInt(quantity),
                 size,
+                price,
               };
+
+              totalAmount += price;
               counter++;
             });
+
+            $("#amountTotal").val(totalAmount);
+
+            const paidAmount = parseFloat($("#amountPaid").val()) || 0;
+            const amountLeft = totalAmount - paidAmount;
+
+            $("#amountLeft").val(amountLeft);
 
             const data = {
               name: name,
               location: location,
               phone: $("#customerPhone").val(),
               items: items,
-              amountTotal: $("#amountTotal").val(),
-              amountPaid: $("#amountPaid").val(),
-              amountLeft: $("#amountLeft").val(),
+              amountTotal: totalAmount.toFixed(2),
+              amountPaid: paidAmount.toFixed(2),
+              amountLeft: amountLeft.toFixed(2),
             };
-
+            console.log(data);
             $.ajax({
               url: `${baseUrl1}/add-customers`,
               method: "POST",
@@ -680,26 +739,78 @@
 
             if (data.results && data.results.length > 0) {
               data.results.forEach((cust) => {
-                const row = document.createElement("tr");
-                row.dataset.customerId = cust.customer_id;
+                const items = JSON.parse(cust.items_bought || "{}");
+                const itemsArray = Object.values(items);
+                const rowSpan = itemsArray.length || 1;
 
-                row.innerHTML = `
-            <td>${cust.customer_id}</td>
-            <td>${cust.name}</td>
-            <td>${cust.phone}</td>
-            <td>${cust.items}</td>
-            <td>${cust.amount_paid}</td>
-            <td>${cust.amount_left}</td>
-            <td>
-              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-            </td>
-          `;
-                list.appendChild(row);
+                if (itemsArray.length === 0) {
+                  // Handle customer with no items
+                  const row = document.createElement("tr");
+                  row.dataset.customerId = cust.customer_id;
+
+                  row.innerHTML = `
+        <td rowspan="${rowSpan}">${cust.customer_id}</td>
+        <td rowspan="${rowSpan}">${cust.name}</td>
+        <td rowspan="${rowSpan}">${cust.phone}</td>
+        <td class='subtr'>-</td>
+        <td class='subtr'>-</td>
+        <td class='subtr'>-</td>
+        <td class='subtr'>-</td>
+        <td rowspan="${rowSpan}">${cust.amount_total}</td>
+        <td rowspan="${rowSpan}">${cust.amount_paid}</td>
+        <td rowspan="${rowSpan}">${cust.amount_left}</td>
+        <td rowspan="${rowSpan}">
+          <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+        </td>
+      `;
+                  list.appendChild(row);
+                } else {
+                  itemsArray.forEach((item, index) => {
+                    const row = document.createElement("tr");
+                    row.dataset.customerId = cust.customer_id;
+
+                    row.innerHTML = `
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.customer_id}</td>`
+              : ""
+          }
+          ${index === 0 ? `<td rowspan="${rowSpan}">${cust.name}</td>` : ""}
+          ${index === 0 ? `<td rowspan="${rowSpan}">${cust.phone}</td>` : ""}
+          <td class='subtr'>${item.title || "-"}</td>
+          <td class='subtr'>${item.size || "-"}</td>
+          <td class='subtr'>${item.quantity || "-"}</td>
+          <td class='subtr'>${item.price || "-"}</td>
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.amount_total}</td>`
+              : ""
+          }
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.amount_paid}</td>`
+              : ""
+          }
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.amount_left}</td>`
+              : ""
+          }
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">
+            <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+          </td>`
+              : ""
+          }
+        `;
+                    list.appendChild(row);
+                  });
+                }
               });
             } else {
               const row = document.createElement("tr");
-              row.innerHTML = `<td colspan="7" class="no-data">No customers found</td>`;
+              row.innerHTML = `<td colspan="11" class="no-data">No customers found</td>`;
               list.appendChild(row);
             }
           })
@@ -784,7 +895,7 @@
                   <td rowspan="${itemsArray.length}">${cust.amount_paid}</td>
                   <td rowspan="${itemsArray.length}">${cust.amount_left}</td>
                   <td rowspan="${itemsArray.length}">
-                    <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                    
                     <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
                   </td>
                 `;
@@ -809,7 +920,6 @@
               <td>${cust.amount_paid}</td>
               <td>${cust.amount_left}</td>
               <td>
-                <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
                 <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
               </td>
             `;
@@ -832,12 +942,17 @@
         const row = button.closest("tr");
         const cells = row.querySelectorAll("td");
 
-        for (let i = 1; i <= 5; i++) {
-          cells[i].contentEditable = true;
-          cells[i].style.backgroundColor = "#ffffdd";
-          cells[i].style.border = "1px solid red";
-        }
+        cells.forEach((cell, index) => {
+          // Skip the last cell where edit/delete buttons are
+          if (!cell.querySelector(".edit") && !cell.querySelector(".delete")) {
+            // Allow all cells, including those with subtr class, to be editable
+            cell.contentEditable = true;
+            cell.style.backgroundColor = "#ffffdd";
+            cell.style.border = "1px solid red";
+          }
+        });
 
+        // Change the button to save
         button.innerHTML = '<i class="fa fa-save"></i>';
         button.setAttribute("onclick", "saveProduct(this)");
       }

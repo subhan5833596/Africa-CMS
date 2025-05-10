@@ -2,136 +2,492 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Finance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop Dashboard</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="../static/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .loader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #4285f4;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 2s linear infinite;
+        display: none;
+      }
+
+      :root {
+        --primary: #6366f1;
+        --secondary: #06b6d4;
+        --accent: #10b981;
+        --danger: #ef4444;
+        --bg: #f9fafb;
+        --text: #111827;
+        --card-bg: #ffffff;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Inter", sans-serif;
+      }
+
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .topbar {
+        background-color: var(--card-bg);
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .topbar h1 {
+        font-size: 1.8rem;
+        color: var(--primary);
+      }
+
+      .topbar .user {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+
+      .topbar .user img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+
+      .sidebar {
+        width: 220px;
+        background: #1e293b;
+        color: white;
+        padding: 2rem 1rem;
+        height: 100vh;
+        position: fixed;
+        top: 64px;
+        left: 0;
+        overflow-y: auto;
+      }
+
+      .sidebar h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        color: var(--accent);
+      }
+
+      .nav-link {
+        display: block;
+        padding: 0.7rem 1rem;
+        color: #cbd5e1;
+        margin-bottom: 0.8rem;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        transition: background 0.3s ease;
+      }
+
+      .nav-link:hover {
+        background-color: var(--primary);
+        color: white;
+      }
+
+      .main {
+        margin-left: 220px;
+        padding: 2rem;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .card h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .card p {
+        font-size: 1.1rem;
+        color: #4b5563;
+      }
+
+      .card.blue {
+        border-left: 6px solid var(--primary);
+      }
+      .card.green {
+        border-left: 6px solid var(--accent);
+      }
+      .card.cyan {
+        border-left: 6px solid var(--secondary);
+      }
+      .card.red {
+        border-left: 6px solid var(--danger);
+      }
+
+      .chart-container {
+        background: var(--card-bg);
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+      }
+
+      .section-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+      }
+
+      .section-links a {
+        background-color: var(--card-bg);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--text);
+        font-weight: 600;
+        box-shadow: var(--shadow);
+        transition: all 0.3s;
+        cursor: pointer;
+      }
+
+      .section-links a:hover {
+        background-color: var(--primary);
+        color: white;
+        transform: scale(1.05);
+      }
+
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: var(--shadow);
+      }
+
+      .modal-content h2 {
+        margin-bottom: 1rem;
+      }
+
+      .modal-content input {
+        width: 100%;
+        padding: 0.6rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+      }
+
+      .modal-content button {
+        padding: 0.6rem 1.2rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 2rem;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 0.8rem;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f3f4f6;
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          display: none;
+        }
+        .main {
+          margin-left: 0;
+          padding: 1rem;
+        }
+        .topbar {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div class="dashboard">
-      <aside class="sidebar">
-        <div class="logo">Finance</div>
-        <nav>
-          <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('inventory') }}">Karkhana</a>
-          <a href="{{ url_for('shop') }}">Shop</a>
-          <a href="{{ url_for('upload') }}">Product Uploading</a>
-          <a href="{{ url_for('customer') }}">Customers</a>
-          <a href="{{ url_for('loan') }}">On Loan</a>
-        </nav>
-      </aside>
-
-      <main class="main-content">
-        <!-- <header class="header">
-          <input type="text" placeholder="Search here..." />
-          <div class="header-right">
-            <span>🔄</span>
-            <span>🔔</span>
-            <img
-              src="https://randomuser.me/api/portraits/men/32.jpg"
-              alt="Profile"
-            />
-          </div>
-        </header> -->
-
-        <section class="cards" id="dashboard-cards">
-          <div class="card">
-            <h4>Total Products In Karkhana</h4>
-            <h2>📦</h2>
-            <p id="karkhana-amount">0</p>
-          </div>
-          <div class="card">
-            <h4>Total Products In Shop</h4>
-            <h2>📦</h2>
-            <p id="shop-amount">0</p>
-          </div>
-          <div class="card">
-            <h4>Total Customers</h4>
-            <h2>👥</h2>
-            <p id="customers-amount">0</p>
-          </div>
-          <div class="card">
-            <h4>Loan Money</h4>
-            <h2>🪙</h2>
-            <p id="loan-amount">0</p>
-          </div>
-        </section>
-        <div class="loader" id="loader" style="display: none"></div>
-
-        <script>
-          const baseUrl = window.location.origin;
-          function fetchDashboardData() {
-            document.getElementById("loader").style.display = "block";
-            fetch(`${baseUrl}/get-dashboard-data`)
-              .then((res) => res.json())
-              .then((data) => {
-                document.getElementById("loader").style.display = "none";
-                const dashboard = data.dashboard_data;
-
-                document.getElementById(
-                  "karkhana-amount"
-                ).innerText = `${dashboard.total_products_in_karkhana} Items`;
-
-                document.getElementById(
-                  "shop-amount"
-                ).innerText = `${dashboard.total_products_in_shop} Items`;
-
-                document.getElementById(
-                  "customers-amount"
-                ).innerText = `${dashboard.total_customers} Customers`;
-
-                document.getElementById(
-                  "loan-amount"
-                ).innerText = `${dashboard.loan_money}`;
-              })
-              .catch((err) => {
-                document.getElementById("loader").style.display = "none";
-                console.error("Error fetching dashboard data:", err);
-              });
-          }
-
-          fetchDashboardData();
-        </script>
-
-        <section class="cards">
-          <div class="card">
-            <a href="{{ url_for('upload') }}">
-              <h4>Add Product</h4>
-              <h2>➕</h2>
-              <p>Create new products</p>
-            </a>
-          </div>
-          <div class="card">
-            <a href="{{ url_for('inventory') }}">
-              <h4>View Products</h4>
-              <h2>📦</h2>
-              <p>See all products</p>
-            </a>
-          </div>
-          <div class="card">
-            <a href="{{ url_for('customer') }}">
-              <h4>View Customers</h4>
-              <h2>👥</h2>
-              <p>Manage your customers</p>
-            </a>
-          </div>
-          <div class="card">
-            <a href="{{ url_for('loan') }}">
-              <h4>View OnLoan Customers</h4>
-              <h2>👥</h2>
-              <p>Manage your customers with Loan</p>
-            </a>
-          </div>
-        </section>
-
-        <section class="charts">
-          <div class="chart-box">AP and AR Balance (Chart)</div>
-          <div class="chart-box">Income Budget (Chart)</div>
-          <div class="chart-box">Expenses Budget (Chart)</div>
-        </section>
-      </main>
+    <div class="topbar">
+      <h1>🛒 MyShop Dashboard</h1>
+      <div class="user">
+        <span>Hello, Admin</span>
+        <img src="https://i.pravatar.cc/40?img=3" alt="User" />
+      </div>
     </div>
+
+    <div class="sidebar">
+      <h2>MyShop</h2>
+      <a href="{{ url_for('dashboard') }}" class="nav-link">🏠 Home</a>
+      <a href="{{ url_for('inventory') }}" class="nav-link">📦 Gudaam</a>
+      <a href="{{ url_for('shop') }}" class="nav-link">📦 Shop</a>
+      <a href="{{ url_for('soldProducts') }}" class="nav-link"
+        >💰 Sold Products</a
+      >
+      <a href="{{ url_for('customer') }}" class="nav-link">📊 Customer</a>
+      <a href="{{ url_for('loan') }}" class="nav-link">👥 Loan Customers</a>
+    </div>
+
+    <div class="main">
+      <div class="dashboard">
+        <div class="card blue">
+          <h3>📦 Shop Products</h3>
+          <p id="shop-amount">--</p>
+        </div>
+        <div class="card red">
+          <h3>🏭 Gudaam Products</h3>
+          <p id="gudaam-amount">--</p>
+        </div>
+        <div class="card cyan">
+          <h3>🧾 Customers</h3>
+          <p id="customers-amount">--</p>
+        </div>
+        <div class="card green">
+          <h3>💰 Total Sales</h3>
+          <p id="sales-amount">--</p>
+        </div>
+      </div>
+      <div class="loader" id="loader" style="display: none"></div>
+      <div class="chart-container">
+        <canvas id="salesChart" height="40"></canvas>
+      </div>
+
+      <div class="section-links">
+        <a onclick="openModal('product')">➕ Add Product</a>
+        <a href="{{ url_for('shop') }}">📄 View Products</a>
+        <a href="{{ url_for('customer') }}">📄 View Customer</a>
+        <a href="{{ url_for('soldProducts') }}">🧾 Sold Items</a>
+        <a href="{{ url_for('loan') }}">👥 Loan Customers</a>
+      </div>
+
+      <div id="productTableContainer"></div>
+      <div id="customerTableContainer"></div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="modal-product">
+      <div class="modal-content">
+        <h2>Add Product</h2>
+        <input
+          type="text"
+          class="input-field"
+          id="product-title"
+          placeholder="Enter product title"
+        />
+        <input
+          type="number"
+          class="input-field"
+          id="product-price"
+          placeholder="Enter price"
+        />
+        <input
+          type="number"
+          class="input-field"
+          id="product-quantity"
+          placeholder="Enter quantity"
+        />
+        <input
+          type="text"
+          class="input-field"
+          id="product-unit"
+          placeholder="Enter quantity unit"
+        />
+        <input
+          type="text"
+          class="input-field"
+          id="product-size"
+          placeholder="Enter size"
+        />
+        <select class="input-field" id="product-source">
+          <option value="karkhana">Karkhana</option>
+          <option value="shop">Shop</option>
+        </select>
+        <button onclick="saveProduct()">Save</button>
+      </div>
+    </div>
+
+    <script>
+      const ctx = document.getElementById("salesChart").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May"],
+          datasets: [
+            {
+              label: "Monthly Sales",
+              data: [3000, 4200, 3500, 5800, 6200],
+              backgroundColor: "rgba(99, 102, 241, 0.2)",
+              borderColor: "#6366f1",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: { responsive: true },
+      });
+
+      function openModal(type) {
+        document.getElementById(`modal-${type}`).classList.add("active");
+      }
+
+      window.onclick = function (e) {
+        if (e.target.classList.contains("modal")) {
+          e.target.classList.remove("active");
+        }
+      };
+
+      function saveProduct() {
+        const source = document.getElementById("product-source").value;
+        const title = document.getElementById("product-title").value;
+        const price = document.getElementById("product-price").value;
+        const quantity = document.getElementById("product-quantity").value;
+        const unit = document.getElementById("product-unit").value;
+        const size = document.getElementById("product-size").value;
+
+        if (!source || !title || !price || !quantity || !size || !unit) {
+          alert("⚠️ Please fill all fields.");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("source", source);
+        formData.append("title", title);
+        formData.append("price", price);
+        formData.append("quantity", quantity);
+        formData.append("unit", unit);
+        formData.append("size", size);
+
+        fetch(`${baseUrl}/add-product`, {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "success") {
+              alert("Product uploaded successfully!");
+              console.log("New Product ID:", data.product_id);
+              document.getElementById("product-title").value = "";
+              document.getElementById("product-price").value = "";
+              document.getElementById("product-quantity").value = "";
+              document.getElementById("product-unit").value = "";
+              document.getElementById("product-size").value = "";
+            } else {
+              alert("Product Upload failed.");
+            }
+          })
+          .catch((err) => {
+            alert("Error uploading product.");
+            console.error(err);
+          });
+      }
+
+      function createTable(type) {
+        const container = document.getElementById(`${type}TableContainer`);
+        const table = document.createElement("table");
+        table.id = `${type}Table`;
+        table.innerHTML =
+          type === "product"
+            ? `<tr><th>Product Name</th><th>Price</th><th>Quantity</th></tr>`
+            : `<tr><th>Customer Name</th><th>Email</th><th>Phone</th></tr>`;
+        container.appendChild(table);
+        return table;
+      }
+
+      const baseUrl = window.location.origin;
+
+      function fetchDashboardData() {
+        document.getElementById("loader").style.display = "block";
+        fetch(`${baseUrl}/get-dashboard-data`)
+          .then((res) => res.json())
+          .then((data) => {
+            document.getElementById("loader").style.display = "none";
+            const dashboard = data.dashboard_data;
+
+            document.getElementById(
+              "shop-amount"
+            ).innerText = `${dashboard.total_products_in_shop} Items`;
+            document.getElementById(
+              "gudaam-amount"
+            ).innerText = `${dashboard.total_products_in_gudaam} Items`;
+            document.getElementById(
+              "customers-amount"
+            ).innerText = `${dashboard.total_customers} Customers`;
+            document.getElementById(
+              "sales-amount"
+            ).innerText = `Rs. ${dashboard.total_sales}`;
+          })
+          .catch((err) => {
+            document.getElementById("loader").style.display = "none";
+            console.error("Error fetching dashboard data:", err);
+          });
+      }
+
+      fetchDashboardData();
+    </script>
   </body>
 </html>

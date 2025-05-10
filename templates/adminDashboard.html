@@ -2,106 +2,332 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Finance Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventory Dashboard</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="../static/css/style.css" />
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --secondary: #06b6d4;
+        --accent: #10b981;
+        --bg: #f3f4f6;
+        --text: #111827;
+        --card-bg: #ffffff;
+        --shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Inter", sans-serif;
+      }
+
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        width: 260px;
+        background: #1f2937;
+        color: white;
+        padding: 2rem 1.25rem;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        text-align: center;
+        color: var(--accent);
+      }
+
+      .nav-link {
+        margin-bottom: 1.2rem;
+        display: block;
+        color: #cbd5e1;
+        text-decoration: none;
+        padding: 0.65rem 1rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+      }
+
+      .nav-link:hover {
+        background-color: var(--primary);
+        color: white;
+        transform: translateX(4px);
+      }
+
+      .main {
+        flex: 1;
+        padding: 2.5rem;
+      }
+
+      .main h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        color: var(--primary);
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+      }
+
+      .card {
+        background-color: var(--card-bg);
+        padding: 2rem;
+        border-radius: 1.25rem;
+        box-shadow: var(--shadow);
+        transition: all 0.3s ease;
+        border-left: 6px solid var(--primary);
+      }
+
+      .card:hover {
+        transform: scale(1.03);
+      }
+
+      .card h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .card p {
+        font-size: 1.1rem;
+        color: #4b5563;
+      }
+
+      .sections {
+        margin-top: 1.5rem;
+      }
+
+      .sections h2 {
+        font-size: 1.8rem;
+        color: var(--primary);
+        margin-bottom: 1.5rem;
+      }
+
+      .section-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.2rem;
+      }
+
+      .section-links a {
+        background-color: var(--card-bg);
+        padding: 1.1rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: var(--shadow);
+        text-decoration: none;
+        color: var(--text);
+        font-weight: 600;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+
+      .section-links a:hover {
+        background-color: var(--primary);
+        color: white;
+        transform: scale(1.05);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        width: 100%;
+        max-width: 500px;
+      }
+
+      .modal-content h2 {
+        margin-bottom: 1rem;
+        color: var(--primary);
+      }
+
+      .modal-content input,
+      .modal-content textarea {
+        width: 100%;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+
+      .modal-content button {
+        padding: 0.7rem 1.5rem;
+        background-color: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .close-modal {
+        float: right;
+        font-size: 1.2rem;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
-    <div class="dashboard">
-      <aside class="sidebar">
-        <div class="logo">Finance</div>
-        <nav>
-          <a href="{{ url_for('dashboard') }}">Dashboard</a>
-          <a href="{{ url_for('inventory') }}">Karkhana</a>
-          <a href="{{ url_for('customer') }}">Customers</a>
-          <a href="{{ url_for('loan') }}">Loan</a>
-        </nav>
-      </aside>
-
-      <main class="main-content">
-        <header class="header">
-          <input type="text" placeholder="Search here..." />
-          <div class="header-right">
-            <span>🔄</span>
-            <span>🔔</span>
-            <img
-              src="https://randomuser.me/api/portraits/men/32.jpg"
-              alt="Profile"
-            />
-          </div>
-        </header>
-
-        <section class="cards" id="dashboard-cards">
-          <div class="card">
-            <h4>Total Inventory</h4>
-            <h2>💰</h2>
-            <p id="inventory-amount">$0</p>
-          </div>
-          <div class="card">
-            <h4>Total Customers</h4>
-            <h2>💸</h2>
-            <p id="customers-amount">$0</p>
-          </div>
-          <div class="card">
-            <h4>Loan Money</h4>
-            <h2>🪙</h2>
-            <p id="loan-amount">$0</p>
-          </div>
-          <div class="card">
-            <h4>Today's Sale</h4>
-            <h2>📈</h2>
-            <p id="sale-amount">$0</p>
-          </div>
-        </section>
-
-        <script>
-          const baseUrl = window.location.origin;
-          function fetchDashboardData() {
-            fetch(`${baseUrl}/get-admin-dashboard-data`)
-              .then((res) => res.json())
-              .then((data) => {
-                const dashboard = data.dashboard_data;
-                document.getElementById(
-                  "inventory-amount"
-                ).innerText = `$${dashboard.total_inventory}`;
-                document.getElementById(
-                  "customers-amount"
-                ).innerText = `${dashboard.total_customers} Customers`;
-                document.getElementById(
-                  "loan-amount"
-                ).innerText = `$${dashboard.loan_money}`;
-                document.getElementById(
-                  "sale-amount"
-                ).innerText = `$${dashboard.todays_sale}`;
-              })
-              .catch((err) =>
-                console.error("Error fetching dashboard data:", err)
-              );
-          }
-
-          fetchDashboardData();
-        </script>
-
-        <section class="cards">
-          <div class="card">
-            <a href="{{ url_for('inventory') }}">
-              <h4>View Products</h4>
-              <h2>📦</h2>
-              <p>See all products</p>
-            </a>
-          </div>
-          <div class="card">
-            <a href="{{ url_for('customer') }}">
-              <h4>View Customers</h4>
-              <h2>👥</h2>
-              <p>Manage your customers</p>
-            </a>
-          </div>
-        </section>
-      </main>
+    <div class="sidebar">
+      <div>
+        <h2>📊 InvDash+</h2>
+        <a href="#" class="nav-link">Dashboard</a>
+        <a href="#" class="nav-link">Products</a>
+        <a href="#" class="nav-link">Sales</a>
+        <a href="#" class="nav-link">Customers</a>
+        <a href="#" class="nav-link">Reports</a>
+        <a href="#" class="nav-link">Settings</a>
+      </div>
     </div>
+
+    <div class="main">
+      <h1>Welcome Admin 👋</h1>
+
+      <div class="dashboard">
+        <div class="card">
+          <h3>📦 Total Products</h3>
+          <p id="inventory-amount">Loading...</p>
+        </div>
+        <div class="card">
+          <h3>💰 Total Sales</h3>
+          <p id="sale-amount">Loading...</p>
+        </div>
+        <div class="card">
+          <h3>👥 Total Customers</h3>
+          <p id="customers-amount">Loading...</p>
+        </div>
+        <div class="card">
+          <h3>⚠️ Low Stock Alerts</h3>
+          <p id="loan-amount">Loading...</p>
+        </div>
+      </div>
+
+      <div class="sections">
+        <h2>Management Sections</h2>
+        <div class="section-links">
+          <a onclick="openModal('Add Product')">➕ Add Product</a>
+          <a onclick="openModal('View Products')">📄 View Products</a>
+          <a onclick="openModal('Delete Product')">🗑️ Delete Product</a>
+          <a onclick="openModal('Edit Product')">✏️ Edit Product</a>
+          <a onclick="openModal('View Customers')">👥 View Customers</a>
+          <a onclick="openModal('Add Customer')">➕ Add Customer</a>
+          <a onclick="openModal('Return Items')">💸 Return Items</a>
+          <a onclick="openModal('Customers on Loan')">🏦 Customers on Loan</a>
+          <a onclick="openModal('View Loans')">📃 View Loans</a>
+          <a onclick="openModal('Shop 1 Items')">🏪 Shop 1 Items</a>
+          <a onclick="openModal('Shop 2 Items')">🏪 Shop 2 Items</a>
+          <a onclick="openModal('Karkhana Items')">🏭 Karkhana Items</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modal">
+      <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h2 id="modal-title">Modal Title</h2>
+        <div id="modal-body">
+          <!-- Dynamic content here -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const modal = document.getElementById("modal");
+      const modalTitle = document.getElementById("modal-title");
+      const modalBody = document.getElementById("modal-body");
+
+      function openModal(title) {
+        modal.style.display = "flex";
+        modalTitle.innerText = title;
+        modalBody.innerHTML = getModalContent(title);
+      }
+
+      function closeModal() {
+        modal.style.display = "none";
+      }
+
+      function getModalContent(title) {
+        if (title === "Add Customer") {
+          return ` 
+          <input type="text" placeholder="Customer Name" />
+          <input type="text" placeholder="Item" />
+          <input type="number" placeholder="Quantity" />
+          <input type="number" placeholder="Price" />
+          <button onclick="alert('Customer Added')">Save</button>
+        `;
+        } else if (title === "View Products") {
+          return ` 
+          <input type="text" placeholder="Search Products" />
+          <input type="text" placeholder="Filter by Category" />
+          <div style="margin-top:1rem">📦 Product 1<br>📦 Product 2<br>📦 Product 3</div>
+        `;
+        } else if (title === "View Customers") {
+          return ` 
+          <div>👤 Ali<br>👤 Zara<br>👤 John</div>
+        `;
+        } else {
+          return ` 
+          <p>This is a simple form or view for "${title}".</p>
+        `;
+        }
+      }
+
+      const baseUrl = window.location.origin;
+      function fetchDashboardData() {
+        fetch(`${baseUrl}/get-dashboard-data`)
+          .then((res) => res.json())
+          .then((data) => {
+            const dashboard = data.dashboard_data;
+            document.getElementById(
+              "inventory-amount"
+            ).innerText = `$${dashboard.total_inventory}`;
+            document.getElementById(
+              "customers-amount"
+            ).innerText = `${dashboard.total_customers} Customers`;
+            document.getElementById(
+              "loan-amount"
+            ).innerText = `$${dashboard.loan_money}`;
+            document.getElementById(
+              "sale-amount"
+            ).innerText = `$${dashboard.todays_sale}`;
+          })
+          .catch((err) => console.error("Error fetching dashboard data:", err));
+      }
+
+      fetchDashboardData();
+    </script>
   </body>
 </html>

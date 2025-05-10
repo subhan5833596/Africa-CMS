@@ -39,7 +39,7 @@ LOGIN_SPREADSHEET_ID = '1pQJ8-xFMfzVG19w9fFP-3Cb29k379oGXIVRm0bk1kI8'  # New she
 INVENTORY_SPREADSHEET_ID = '1jJTfIlE_m-b8WMag6uXjgLniOeVKmiCg6ur577c0aDs'  # New sheet ID for karkhana
 SHOP_SPREADSHEET_ID = '15T6weqATatNOE4gg6m2zP2L02eCYVOqpJJOxNQWnuLI'  # New sheet ID for shop
 CUSTOMER_SPREADSHEET_ID = '1hFi9-Sp8KcE1jXDC9-1CsbBL98VqFvXOrSMxJesa0_c'
-GUDAAM_SHEET_RANGE = 'test!A1'
+GUDAAM_SHEET_RANGE = 'Store1!A1'
 
 # === Auth ===
 creds = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_INFO, scopes=SCOPES)
@@ -50,6 +50,14 @@ sheet_service = build('sheets', 'v4', credentials=creds)
 def dashboard():
     if 'username' in session:
         return render_template('dashboard.html')
+    else:
+        return redirect(url_for('login'))
+
+
+@app.route('/admin-dashboard')
+def admin_dashboard():
+    if 'username' in session:
+        return render_template('adminDashboard.html')
     else:
         return redirect(url_for('login'))
 
@@ -180,7 +188,7 @@ def move_inventory():
 
 from datetime import datetime
 def get_all_store_ids():
-    return ['Store1', 'Store2', 'Store3']
+    return ['Store1', 'Store2']
 
 @app.route('/get-dashboard-data', methods=['GET'])
 def get_dashboard_data():
@@ -190,11 +198,11 @@ def get_dashboard_data():
         if not store_id:
             return jsonify({'message': 'Store ID is required. Please log in.'}), 400
 
-        # Initialize variables
+        # Initialize totals
         total_products_in_shop = 0
-        total_products_in_karkhana = 0
+        total_products_in_gudaam = 0
         total_customers = 0
-        total_loan_money = 0
+        total_sales = 0
 
         if store_id == 'all':
             store_ids = get_all_store_ids()
@@ -202,7 +210,7 @@ def get_dashboard_data():
             store_ids = [store_id]
 
         for store in store_ids:
-            # 1. Count shop products
+            # 1. Shop products (shop spreadsheet)
             shop_sheet_range = f'{store}!A2:A'
             shop_result = sheet_service.spreadsheets().values().get(
                 spreadsheetId=SHOP_SPREADSHEET_ID,
@@ -211,17 +219,17 @@ def get_dashboard_data():
             shop_values = shop_result.get('values', [])
             total_products_in_shop += len(shop_values)
 
-            # 2. Count karkhana products
-            karkhana_sheet_range = f'test!A2:A'
-            karkhana_result = sheet_service.spreadsheets().values().get(
+            # 2. Gudaam products (inventory spreadsheet)
+            gudaam_sheet_range = f'{store}!A2:A'
+            gudaam_result = sheet_service.spreadsheets().values().get(
                 spreadsheetId=INVENTORY_SPREADSHEET_ID,
-                range=karkhana_sheet_range
+                range=gudaam_sheet_range
             ).execute()
-            karkhana_values = karkhana_result.get('values', [])
-            total_products_in_karkhana += len(karkhana_values)
+            gudaam_values = gudaam_result.get('values', [])
+            total_products_in_gudaam += len(gudaam_values)
 
-            # 3. Total Customers & Loan Money
-            customer_sheet_range = f'{store}!A2:F'
+            # 3. Total customers (customer spreadsheet)
+            customer_sheet_range = f'{store}!A2:A'
             customer_result = sheet_service.spreadsheets().values().get(
                 spreadsheetId=CUSTOMER_SPREADSHEET_ID,
                 range=customer_sheet_range
@@ -229,16 +237,26 @@ def get_dashboard_data():
             customer_values = customer_result.get('values', [])
             total_customers += len(customer_values)
 
-            for row in customer_values:
-                amount_left = float(row[5]) if len(row) > 5 and row[5] else 0
-                if amount_left > 0:
-                    total_loan_money += amount_left
+        # 4. Total sales from 'sp - test' sheet
+        sales_sheet_range = 'sp - test!D2:D'
+        sales_result = sheet_service.spreadsheets().values().get(
+            spreadsheetId=CUSTOMER_SPREADSHEET_ID,
+            range=sales_sheet_range
+        ).execute()
+        sales_values = sales_result.get('values', [])
+
+        for row in sales_values:
+            try:
+                amount = float(row[0]) if row and row[0] else 0
+                total_sales += amount
+            except ValueError:
+                continue
 
         dashboard_data = {
             'total_products_in_shop': total_products_in_shop,
-            'total_products_in_karkhana': total_products_in_karkhana,
+            'total_products_in_gudaam': total_products_in_gudaam,
             'total_customers': total_customers,
-            'loan_money': total_loan_money
+            'total_sales': total_sales
         }
 
         return jsonify({'dashboard_data': dashboard_data}), 200
@@ -246,6 +264,9 @@ def get_dashboard_data():
     except Exception as e:
         logging.error(f"Error fetching dashboard data: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+
 
 @app.route('/get-products', methods=['GET'])
 def get_products():
@@ -258,7 +279,7 @@ def get_products():
 
     store_ids = get_all_store_ids() if store_id == 'all' else [store_id]
     spreadsheet_id = INVENTORY_SPREADSHEET_ID if key == 'karkhana' else SHOP_SPREADSHEET_ID
-    store_ids = ['test'] if key == 'karkhana' else store_ids
+    store_ids = ['Store1'] if key == 'karkhana' else store_ids
 
     try:
         print(key,store_id)
@@ -330,7 +351,7 @@ def update_product(product_id):
     size = data.get('size')
 
     spreadsheet_id = INVENTORY_SPREADSHEET_ID if key == 'karkhana' else SHOP_SPREADSHEET_ID
-    store_id = 'test' if key == 'karkhana' else store_id
+    store_id = 'Store1' if key == 'karkhana' else store_id
 
     try:
         sheet_range = f'{store_id}!B{product_id}:F{product_id}'  # B to E matches title to size
@@ -353,7 +374,7 @@ def delete_product(product_id):
     key = request.args.get('karkhana')
 
     spreadsheet_id = INVENTORY_SPREADSHEET_ID if key == 'karkhana' else SHOP_SPREADSHEET_ID
-    store_id = 'test' if key == 'karkhana' else store_id
+    store_id = 'Store1' if key == 'karkhana' else store_id
     try:    
         result = sheet_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
@@ -396,7 +417,7 @@ def add_product():
     try:
         # Select the correct Spreadsheet ID based on the 'source' field (shop or karkhana)
         spreadsheet_id = SHOP_SPREADSHEET_ID if source == 'shop' else INVENTORY_SPREADSHEET_ID
-        store_id = 'test' if source != 'shop' else store_id
+        store_id = 'Store1' if source != 'shop' else store_id
         # Get all rows from the sheet (we need to check both ID and existing rows)
         sheet_data = sheet_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
@@ -465,7 +486,7 @@ def product_search():
         # Read all products from Google Sheet
         result = sheet_service.spreadsheets().values().get(
             spreadsheetId=INVENTORY_SPREADSHEET_ID,
-            range=f'test!A2:F'
+            range=f'Store1!A2:F'
         ).execute()
 
         rows = result.get('values', [])
@@ -536,7 +557,7 @@ def update_inventory(location,store_id, product_id, quantity_sold):
     try:
         # Get the current inventory for the product (dynamically use store_id as sheet name)
         sheet_range = f'{store_id}!A2:E'
-        ksheet_range = f'test!A2:F'
+        ksheet_range = f'Store1!A2:F'
 
         if location == 'karkhana':
             result = sheet_service.spreadsheets().values().get(
@@ -563,7 +584,7 @@ def update_inventory(location,store_id, product_id, quantity_sold):
 
                 # Update the quantity in the sheet (dynamically use store_id as sheet name)
                 update_range = f'{store_id}!D{rows.index(row) + 2}'  # Row is 1-based, so add 2
-                kupdate_range = f'test!D{rows.index(row) + 2}'
+                kupdate_range = f'Store1!D{rows.index(row) + 2}'
                 print(update_range)
                 if location == 'karkhana':
                     sheet_service.spreadsheets().values().update(
@@ -685,7 +706,7 @@ def get_onloan_customers():
 
         # Loop through each store ID (either all or the specific one)
         for store in store_ids:
-            sheet_range = f'{store}!A2:F'  # A=Customer ID, B=Name, C=Phone, D=ItemsBought, E=Amount Paid, F=Amount Left
+            sheet_range = f'{store}!A2:G'  # A=Customer ID, B=Name, C=Phone, D=ItemsBought, E=Amount Paid, F=Amount Left
             result = sheet_service.spreadsheets().values().get(
                 spreadsheetId=CUSTOMER_SPREADSHEET_ID,
                 range=sheet_range
@@ -697,7 +718,7 @@ def get_onloan_customers():
                 continue  # Skip if no data is found for this store
 
             for row in values:
-                amount_left = row[5] if len(row) > 5 else "0"
+                amount_left = row[6] if len(row) > 6 else "0"
                 print(row)
                 # Safely convert to number for comparison
                 try:
@@ -711,7 +732,8 @@ def get_onloan_customers():
                         'name': row[1] if len(row) > 1 else "",
                         'phone': row[2] if len(row) > 2 else "",
                         'items_bought': row[3] if len(row) > 3 else "",
-                        'amount_paid': row[4] if len(row) > 4 else "",
+                        'amount_total': row[4] if len(row) > 4 else "",
+                        'amount_paid': row[5] if len(row) > 5 else "",
                         'amount_left': amount_left
                     })
 
@@ -725,51 +747,51 @@ from datetime import datetime
 @app.route('/add-customers', methods=['POST'])
 def add_customers():
     store_id = session.get('store_id')
-
     if not store_id:
         return jsonify({'message': 'Store ID is required. Please log in.'}), 400
 
     try:
         data = request.get_json()
         print(data)
-        required_fields = ['name', 'phone', 'location', 'items', 'amountPaid', 'amountLeft']
+
+        required_fields = ['name', 'phone', 'location', 'items', 'amountPaid', 'amountLeft', 'amountTotal']
         if not all(field in data for field in required_fields):
             return jsonify({'message': 'Missing required fields.'}), 400
 
-        if not isinstance(data['items'], list):
-            return jsonify({'message': "'items' must be a list."}), 400
-        for item in data['items']:
-            if not isinstance(item, dict) or not all(k in item for k in ['id', 'title', 'quantity']):
+        # ✅ Validate items format
+        if not isinstance(data['items'], dict):
+            return jsonify({'message': "'items' must be a dictionary."}), 400
+
+        items_list = []
+        for key, item in data['items'].items():
+            if not all(k in item for k in ['id', 'title', 'quantity', 'size', 'price']):
                 return jsonify({'message': f"Invalid item format: {item}"}), 400
+            items_list.append(item)
 
-        # --- 🔁 Update inventory for each product
-
-        # --- 🆔 Get next customer ID
+        # ✅ Next customer ID
         sheet_range = f'{store_id}!A2:A'
         result = sheet_service.spreadsheets().values().get(
             spreadsheetId=CUSTOMER_SPREADSHEET_ID,
             range=sheet_range
         ).execute()
-
         existing_customers = result.get('values', [])
         next_customer_id = len(existing_customers) + 2
 
-        # --- 🛒 Format item summary
-        items_bought_str = ', '.join(
-            f"{item['title']} x {item['quantity']} x {item['size']}" for item in data['items']
-        )
+        # ✅ Convert item data to JSON string for sheet
+        import json
+        items_bought_json = json.dumps(data['items'], indent=2)
 
-        # --- 📤 Append customer to sheet
+        # ✅ Append to sheet
         customer_row = [
             next_customer_id,
             data['name'],
-            data['phone'] if data['phone'] else "-",
-            items_bought_str,
+            data['phone'] or "-",
+            items_bought_json,
             data['amountTotal'],
             data['amountPaid'],
             data['amountLeft']
         ]
-        
+
         sheet_service.spreadsheets().values().append(
             spreadsheetId=CUSTOMER_SPREADSHEET_ID,
             range=f'{store_id}!A2:G',
@@ -777,11 +799,23 @@ def add_customers():
             body={"values": [customer_row]}
         ).execute()
 
-        for item in data['items']:
-            update_inventory(data['location'],store_id, int(item['id']), int(item['quantity']))
+        # ✅ Update inventory using valid product id
+        for item in items_list:
+            product_id = int(item['id'])  # Now properly validated
+            quantity_sold = int(item['quantity'])
+            update_inventory(data['location'], store_id, product_id, quantity_sold)
 
+        # ✅ Add to sold products
         date = datetime.now().strftime("%Y-%m-%d")
-        add_to_sold_products(store_id, date, item['title'], data['amountTotal'], item['quantity'], item['size'])
+        for item in items_list:
+            add_to_sold_products(
+                store_id,
+                date,
+                item['title'],
+                item['price'],
+                item['quantity'],
+                item['size']
+            )
 
         return jsonify({'message': 'Customer added and inventory updated successfully.'}), 200
 
@@ -797,6 +831,7 @@ def update_customer(product_id):
     name = data.get('name')
     phone = data.get('phone')
     items_bought = data.get('items_bought')
+    amount_total = data.get('amountTotal')
     amount_paid = data.get('amountPaid')
     amount_left = data.get('amountLeft')
     
@@ -804,8 +839,8 @@ def update_customer(product_id):
     spreadsheet_id = CUSTOMER_SPREADSHEET_ID
 
     try:
-        sheet_range = f'{store_id}!B{product_id}:F{product_id}'  # B to E matches title to size
-        values = [[name, phone, items_bought, amount_paid, amount_left]]
+        sheet_range = f'{store_id}!B{product_id}:G{product_id}'  # B to E matches title to size
+        values = [[name, phone, items_bought, amount_total,amount_paid, amount_left]]
         print(values)
         sheet_service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id,
@@ -869,7 +904,7 @@ def search_product():
             sheet_range = f'{store_id}!A2:F'
         elif source_type == 'karkhana':
             spreadsheet_id = INVENTORY_SPREADSHEET_ID
-            sheet_range = f'test!A2:F'
+            sheet_range = f'Store1!A2:F'
         elif source_type == 'customer':
             spreadsheet_id = CUSTOMER_SPREADSHEET_ID
             sheet_range = f'{store_id}!A2:F'
@@ -896,11 +931,12 @@ def search_product():
                 if len(row) > 3 and query in row[1].lower():
                     matches.append({
                         'customer_id': row[0],
-                        'name': row[1],
-                        'phone': row[2],
-                        'items': row[3],
-                        'amount_paid': row[4],
-                        'amount_left': row[5]
+                        'name': row[1] if len(row) > 1 else "",
+                        'phone': row[2] if len(row) > 2 else "",
+                        'items_bought': row[3] if len(row) > 3 else "",
+                        'amount_total': row[4] if len(row) > 4 else "",
+                        'amount_paid': row[5] if len(row) > 5 else "",
+                        'amount_left': row[6] if len(row) > 6 else ""
                     })
             elif source_type == 'soldproduct':
                 if len(row) > 1 and query in row[2].lower():
@@ -961,7 +997,7 @@ def move_inventory_to_shop():
                 return jsonify({'message': f'Invalid quantity for item: {title}'}), 400
 
             # 1. Fetch inventory data
-            inventory_range = f'test!A2:F'
+            inventory_range = f'Store1!A2:F'
             inventory_result = sheet_service.spreadsheets().values().get(
                 spreadsheetId=INVENTORY_SPREADSHEET_ID,
                 range=inventory_range
@@ -980,7 +1016,7 @@ def move_inventory_to_shop():
                     if new_quantity < 0:
                         return jsonify({'message': f'Insufficient quantity for {title}'}), 400
 
-                    update_range = f'test!D{index + 2}'  # Adjust row index
+                    update_range = f'Store1!D{index + 2}'  # Adjust row index
                     sheet_service.spreadsheets().values().update(
                         spreadsheetId=INVENTORY_SPREADSHEET_ID,
                         range=update_range,
@@ -1051,7 +1087,7 @@ def get_sold_products():
                 }
                 print(product)
                 sold_products.append(product)
-                total_sold += quantity  # Adjusted to count total quantity sold
+                total_sold += int(amount)  # Adjusted to count total quantity sold
 
         if not sold_products:
             return jsonify({'message': 'No sold data found'}), 404

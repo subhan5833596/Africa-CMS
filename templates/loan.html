@@ -89,6 +89,7 @@
                 <th>Name</th>
                 <th>Phone</th>
                 <th>Items Bought</th>
+                <th>Total Amount</th>
                 <th>Amount Paid</th>
                 <th>Amount Left</th>
                 <th>Actions</th>
@@ -135,6 +136,7 @@
             <td>${cust.name}</td>
             <td>${cust.phone}</td>
             <td>${cust.items}</td>
+            <td>${cust.amount_total}</td>
             <td>${cust.amount_paid}</td>
             <td>${cust.amount_left}</td>
             <td>
@@ -166,8 +168,9 @@
           name: cells[1].innerText.trim(),
           phone: cells[2].innerText.trim(),
           items_bought: cells[3].innerText.trim(),
-          amountPaid: cells[4].innerText.trim(),
-          amountLeft: cells[5].innerText.trim(),
+          amountTotal: cells[4].innerText.trim(),
+          amountPaid: cells[5].innerText.trim(),
+          amountLeft: cells[6].innerText.trim(),
         };
         document.getElementById("loader").style.display = "block";
         fetch(`${baseUrl}/update-customer/${productId}`, {
@@ -213,6 +216,7 @@
                   <td>${cust.name}</td>
                   <td>${cust.phone}</td>
                   <td>${cust.items_bought}</td>
+                  <td>${cust.amount_total}</td>
                   <td>${cust.amount_paid}</td>
                   <td>${cust.amount_left}</td>
                   <td>
@@ -238,7 +242,7 @@
         const row = button.closest("tr");
         const cells = row.querySelectorAll("td");
 
-        for (let i = 1; i <= 5; i++) {
+        for (let i = 1; i <= 6; i++) {
           cells[i].contentEditable = true;
           cells[i].style.backgroundColor = "#ffffdd";
           cells[i].style.border = "1px solid red";

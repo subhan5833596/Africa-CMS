@@ -111,27 +111,11 @@
           "
         >
           <h1>SOLD PRODUCTS</h1>
-          <div style="display: flex; gap: 10px">
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="Search product..."
-              style="padding: 8px; width: 250px"
-            />
-            <button
-              id="search-btn"
-              onclick="searchProduct()"
-              style="padding: 8px 16px"
-            >
-              Search
-            </button>
-          </div>
         </div>
         <div class="cards">
           <div class="card">
-            <h4>Total Products</h4>
+            <h4>Total Sale Amount</h4>
             <h2 id="total_sold">0</h2>
-            <p>Number of products in karkhana</p>
           </div>
         </div>
         <div class="row">
@@ -143,7 +127,6 @@
                 <th>Item Qunatity</th>
                 <th>Item Size</th>
                 <th>Amount</th>
-                <th>Action</th>
               </tr>
             </thead>
             <tbody id="product-list"></tbody>
@@ -191,38 +174,33 @@
             document.getElementById("loader").style.display = "none";
             const productList = document.getElementById("product-list");
             const totalProducts = document.getElementById("total_sold");
-            console.log(data);
             productList.innerHTML = "";
 
             if (data.sold_products && data.sold_products.length > 0) {
-              data.sold_products.forEach((product) => {
+              // Sort products by date in descending order
+              const sortedProducts = data.sold_products.sort(
+                (a, b) => new Date(b.date) - new Date(a.date)
+              );
+
+              sortedProducts.forEach((product) => {
                 const row = document.createElement("tr");
                 row.setAttribute("data-id", product.id);
                 row.innerHTML = `
-                        <td>${product.date}</td>
-                        <td>${product.title}</td>
-                        <td>${product.quantity}</td>
-                        <td>${product.size}</td>
-                        <td>${product.amount}</td>
-                        <td>
-                          <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-                          <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-                        </td>
-                      `;
+            <td>${product.date}</td>
+            <td>${product.title}</td>
+            <td>${product.quantity}</td>
+            <td>${product.size}</td>
+            <td>${product.amount}</td>
+          `;
                 productList.appendChild(row);
               });
 
-              // Direct backend se values set karo
               totalProducts.innerText = data.total_sold;
-              //   lowStock.innerText = data.low_stock.length;
             } else {
-              document.getElementById("loader").style.display = "none";
               const row = document.createElement("tr");
               row.innerHTML = '<td colspan="6">No products available.</td>';
               productList.appendChild(row);
-
               totalProducts.innerText = 0;
-              //   lowStock.innerText = 0;
             }
           })
           .catch((err) => {
