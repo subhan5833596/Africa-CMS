@@ -9,7 +9,7 @@ import uuid , json
 
 # === Flask App Config ===
 app = Flask(__name__)
-app.secret_key = 'Africa-0000'  # Replace with a strong secret key to sign session data
+app.secret_key = 'Africa-0000111'  # Replace with a strong secret key to sign session data
 CORS(app)
 
 # === Cloudinary Config ===
