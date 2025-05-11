@@ -238,7 +238,7 @@ def get_dashboard_data():
             total_customers += len(customer_values)
 
         # 4. Total sales from 'sp - test' sheet
-        sales_sheet_range = 'sp - test!D2:D'
+        sales_sheet_range = f'sp - {store}!D2:D'
         sales_result = sheet_service.spreadsheets().values().get(
             spreadsheetId=CUSTOMER_SPREADSHEET_ID,
             range=sales_sheet_range
