@@ -757,7 +757,7 @@ def add_customers():
         required_fields = ['name', 'phone', 'location', 'items', 'amountPaid', 'amountLeft', 'amountTotal']
         if not all(field in data for field in required_fields):
             return jsonify({'message': 'Missing required fields.'}), 400
-
+        location = data['location']
         # ✅ Validate items format
         if not isinstance(data['items'], dict):
             return jsonify({'message': "'items' must be a dictionary."}), 400
@@ -810,6 +810,7 @@ def add_customers():
         for item in items_list:
             add_to_sold_products(
                 store_id,
+                location,
                 date,
                 item['title'],
                 item['price'],
@@ -826,22 +827,32 @@ def add_customers():
 @app.route('/update-customer/<int:product_id>', methods=['PUT'])
 def update_customer(product_id):
     store_id = session.get('store_id')
-
     data = request.get_json()
+    
     name = data.get('name')
     phone = data.get('phone')
-    items_bought = data.get('items_bought')
     amount_total = data.get('amountTotal')
     amount_paid = data.get('amountPaid')
     amount_left = data.get('amountLeft')
-    
 
     spreadsheet_id = CUSTOMER_SPREADSHEET_ID
 
     try:
-        sheet_range = f'{store_id}!B{product_id}:G{product_id}'  # B to E matches title to size
-        values = [[name, phone, items_bought, amount_total,amount_paid, amount_left]]
-        print(values)
+        sheet_range = f'{store_id}!B{product_id}:G{product_id}'
+
+        # Step 1: Get existing row
+        existing_row = sheet_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=sheet_range
+        ).execute().get('values', [[]])[0]
+
+        # Step 2: Extract item bought from existing row (D column)
+        item_bought = existing_row[2] if len(existing_row) > 2 else ""
+
+        # Step 3: Update with preserved item_bought
+        values = [[name, phone, item_bought, amount_total, amount_paid, amount_left]]
+
+        # Step 4: Update the sheet
         sheet_service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id,
             range=sheet_range,
@@ -850,9 +861,10 @@ def update_customer(product_id):
         ).execute()
 
         return jsonify({'status': 'success', 'message': 'Customer updated successfully'}), 200
+
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
-  
+
 @app.route('/delete-customer/<product_id>', methods=['DELETE'])
 def delete_customer(product_id):
     store_id = session.get('store_id')
@@ -984,60 +996,82 @@ def move_inventory_to_shop():
         items = data.get('items', [])
 
         if not items:
-            return jsonify({'message': 'No items selected to move.'}), 400
+            return jsonify({'message': 'No items provided'}), 400
+
+        inventory_range = f'Store1!A2:F'
+        inventory_result = sheet_service.spreadsheets().values().get(
+            spreadsheetId=INVENTORY_SPREADSHEET_ID,
+            range=inventory_range
+        ).execute()
+        inventory_rows = inventory_result.get('values', [])
 
         for item in items:
-            product_id = item.get('product_id')
+            product_id = str(item.get('id'))
             title = item.get('title', '').strip()
-            quantity_raw = item.get('quantity')
+            size = item.get('size', '').strip()
+            move_qty = int(item.get('quantity'))
+            price = item.get('price', '').strip()
+            unit = ''
 
-            try:
-                quantity = int(quantity_raw)
-            except (ValueError, TypeError):
-                return jsonify({'message': f'Invalid quantity for item: {title}'}), 400
+            inventory_found = False
 
-            # 1. Fetch inventory data
-            inventory_range = f'Store1!A2:F'
-            inventory_result = sheet_service.spreadsheets().values().get(
-                spreadsheetId=INVENTORY_SPREADSHEET_ID,
-                range=inventory_range
-            ).execute()
-            rows = inventory_result.get('values', [])
+            for i, row in enumerate(inventory_rows):
+                if len(row) >= 5 and row[0] == product_id:
+                    current_qty = int(row[3])
+                    price = row[2]
+                    unit = row[4]  # Extract unit from inventory
 
-            found = False
-            for index, row in enumerate(rows):
-                if len(row) > 4 and row[0] == product_id:
-                    try:
-                        current_quantity = int(row[3])
-                    except (ValueError, TypeError):
-                        return jsonify({'message': f'Invalid current quantity in inventory for {title}'}), 400
+                    new_qty = current_qty - move_qty
+                    if new_qty < 0:
+                        return jsonify({'message': f'Not enough stock for: {title}'}), 400
 
-                    new_quantity = current_quantity - quantity
-                    if new_quantity < 0:
-                        return jsonify({'message': f'Insufficient quantity for {title}'}), 400
-
-                    update_range = f'Store1!D{index + 2}'  # Adjust row index
+                    update_range = f'Store1!D{i+2}'
                     sheet_service.spreadsheets().values().update(
                         spreadsheetId=INVENTORY_SPREADSHEET_ID,
                         range=update_range,
-                        valueInputOption="USER_ENTERED",
-                        body={"values": [[new_quantity]]}
+                        valueInputOption='USER_ENTERED',
+                        body={'values': [[new_qty]]}
                     ).execute()
-                    found = True
+                    inventory_found = True
                     break
 
-            if not found:
-                return jsonify({'message': f'Product {title} not found in inventory'}), 400
+            if not inventory_found:
+                return jsonify({'message': f'Item {title} not found in inventory'}), 400
 
-            # 2. Append to shop sheet
-            shop_range = f'{store_id}!A2:E'
-            shop_values = [product_id, title, "", quantity, ""]
-            sheet_service.spreadsheets().values().append(
+            shop_range = f'{store_id}!A2:F'
+            shop_result = sheet_service.spreadsheets().values().get(
                 spreadsheetId=SHOP_SPREADSHEET_ID,
-                range=shop_range,
-                valueInputOption="USER_ENTERED",
-                body={"values": [shop_values]}
+                range=shop_range
             ).execute()
+            shop_rows = shop_result.get('values', [])
+
+            matched = False
+            for j, row in enumerate(shop_rows):
+                if len(row) >= 6 and row[1].strip().lower() == title.lower() and row[5].strip().lower() == size.lower():
+                    current_shop_qty = int(row[3]) if row[3].isdigit() else 0
+                    new_shop_qty = current_shop_qty + move_qty
+
+                    update_range = f'{store_id}!D{j+2}'
+                    sheet_service.spreadsheets().values().update(
+                        spreadsheetId=SHOP_SPREADSHEET_ID,
+                        range=update_range,
+                        valueInputOption='USER_ENTERED',
+                        body={'values': [[new_shop_qty]]}
+                    ).execute()
+                    matched = True
+                    break
+
+            if not matched:
+                # id | title | price | qty | unit | size
+                new_id = len(shop_rows) + 2
+                new_row = [new_id, title, price, move_qty, unit, size]
+
+                sheet_service.spreadsheets().values().append(
+                    spreadsheetId=SHOP_SPREADSHEET_ID,
+                    range=shop_range,
+                    valueInputOption='USER_ENTERED',
+                    body={'values': [new_row]}
+                ).execute()
 
         return jsonify({'status': 'success', 'message': 'Items moved successfully.'}), 200
 
@@ -1059,21 +1093,21 @@ def get_sold_products():
         sold_products = []
         total_sold = 0
 
-        ranges = [f'SP - {store}!A2:F' for store in store_ids]
+        ranges = [f'SP - {store}!A2:G' for store in store_ids]
         result = sheet_service.spreadsheets().values().batchGet(
             spreadsheetId=spreadsheet_id,
             ranges=ranges
         ).execute()
-
+        print(result)
         value_ranges = result.get('valueRanges', [])
 
         for store, store_values in zip(store_ids, value_ranges):
             values = store_values.get('values', [])
             for idx, row in enumerate(values, start=2):
-                if len(row) < 6 or not row[0].strip():  # skip if title missing
+                if len(row) < 7 or not row[0].strip():  # skip if title missing
                     continue
 
-                sold_product_id,date, title, amount, quantity, size = row[:6]
+                sold_product_id,date, title, amount, quantity, size,source = row[:7]
                 quantity = int(quantity) if quantity else 0
 
                 product = {
@@ -1083,7 +1117,8 @@ def get_sold_products():
                     'title': title,
                     'amount': amount,
                     'quantity': quantity,
-                    'size': size
+                    'size': size,
+                    'source': source
                 }
                 print(product)
                 sold_products.append(product)
@@ -1100,11 +1135,13 @@ def get_sold_products():
     except Exception as e:
         logging.error(f"Error fetching sold products: {e}")
         return jsonify({'error': str(e)}), 500
+    
+import time
 
-
-def add_to_sold_products(store_ids, date, title, amount, quantity, size):
+def add_to_sold_products(store_ids, location,date, title, amount, quantity, size):
     spreadsheet_id = CUSTOMER_SPREADSHEET_ID
     try:
+        
         range_name = f'SP - {store_ids}!A2:F'
 
         # Get existing rows to determine next ID
@@ -1113,20 +1150,23 @@ def add_to_sold_products(store_ids, date, title, amount, quantity, size):
             range=range_name
         ).execute()
         existing_rows = result.get('values', [])
+        
+        time.sleep(2)
         if len(existing_rows) == 0:
             next_id = 2
         else:
-            next_id = len(existing_rows) + 1
+            next_id = len(existing_rows) + 2
 
+        date = datetime.now().strftime("%Y-%m-%d")
         # Prepare data to insert
-        values = [[next_id, date, title, amount, quantity, size if size else "-"]]
+        values = [[next_id, date, title, amount, quantity, size if size else "-",location]]
         body = {'values': values}
-
+        
         # Append row
         sheet_service.spreadsheets().values().append(
             spreadsheetId=spreadsheet_id,
             range=range_name,
-            valueInputOption="USER_ENTERED",
+            valueInputOption="RAW",
             insertDataOption="INSERT_ROWS",
             body=body
         ).execute()
@@ -1137,6 +1177,36 @@ def add_to_sold_products(store_ids, date, title, amount, quantity, size):
         logging.error(f"Error adding sold product: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/delete-sold-product/<product_id>', methods=['DELETE'])
+def delete_sold_product(product_id):
+    store_id = session.get('store_id')
+
+    spreadsheet_id = CUSTOMER_SPREADSHEET_ID
+    try:    
+        result = sheet_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range = f'SP - {store_id}!A2:F'
+        ).execute()
+        values = result.get("values", [])
+
+        row_index = None
+        for i, row in enumerate(values, start=2):
+            if row and row[0] == product_id:
+                row_index = i
+                break
+
+        if row_index is None:
+            return jsonify({'status': 'error', 'message': 'Entry not found'}), 404
+
+        sheet_service.spreadsheets().values().clear(
+            spreadsheetId=spreadsheet_id,
+            range=f"SP - {store_id}!A{row_index}:F{row_index}"
+        ).execute()
+
+        return jsonify({'status': 'success', 'message': 'Sold Product deleted successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 

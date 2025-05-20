@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Inventory</title>
+    <title>Sold Products</title>
     <link rel="stylesheet" href="../static/css/style.css" />
     <style>
       /* Main Content Styling */
@@ -83,6 +83,68 @@
       td {
         background-color: #fff;
       }
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .page-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      .dropdown {
+        position: relative;
+      }
+
+      .dropdown-toggle {
+        padding: 8px 16px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #6c757d;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+      }
+
+      .dropdown-menu {
+        position: absolute;
+        top: 110%;
+        right: 0;
+        background: white;
+        border: 1px solid #ccc;
+        width: 150px;
+        display: none;
+        flex-direction: column;
+        padding: 0;
+        z-index: 999;
+        border-radius: 5px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .dropdown-menu li {
+        list-style: none;
+      }
+
+      .dropdown-menu a {
+        display: block;
+        padding: 10px 15px;
+        text-decoration: none;
+        color: #333;
+      }
+
+      .dropdown-menu a:hover {
+        background-color: #f0f0f0;
+      }
+
+      /* Show dropdown on button click */
+      .dropdown.active .dropdown-menu {
+        display: flex;
+      }
     </style>
   </head>
   <body>
@@ -104,16 +166,42 @@
 
       <!-- Main Content -->
       <div class="main-content">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-          "
-        >
-          <h1>SOLD PRODUCTS</h1>
+        <div class="header-row">
+          <h1 class="page-title">SOLD PRODUCTS</h1>
+          <div class="dropdown">
+            <button
+              class="btn btn-secondary dropdown-toggle"
+              type="button"
+              data-bs-toggle="dropdown"
+            >
+              Filter
+            </button>
+            <ul class="dropdown-menu">
+              <li>
+                <a class="dropdown-item" href="#" onclick="fetchProducts('All')"
+                  >All</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  onclick="fetchProducts('shop')"
+                  >Shop</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  onclick="fetchProducts('karkhana')"
+                  >Karkhana</a
+                >
+              </li>
+            </ul>
+          </div>
         </div>
+
         <div class="cards">
           <div class="card">
             <h4>Total Sale Amount</h4>
@@ -129,6 +217,8 @@
                 <th>Item Qunatity</th>
                 <th>Item Size</th>
                 <th>Amount</th>
+                <th>Source</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="product-list"></tbody>
@@ -140,35 +230,34 @@
     </div>
 
     <script>
+      document.querySelectorAll(".dropdown-toggle").forEach((btn) => {
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          const dropdown = this.parentElement;
+          dropdown.classList.toggle("active");
+
+          // Close other dropdowns
+          document.querySelectorAll(".dropdown").forEach((el) => {
+            if (el !== dropdown) el.classList.remove("active");
+          });
+        });
+      });
+
+      // Optional: close dropdown if clicked outside
+      document.addEventListener("click", function (e) {
+        if (!e.target.closest(".dropdown")) {
+          document
+            .querySelectorAll(".dropdown")
+            .forEach((el) => el.classList.remove("active"));
+        }
+      });
+
       const baseUrl = window.location.origin;
       window.onload = function () {
         fetchProducts();
       };
 
-      function updateQty(button, type) {
-        const row = button.closest("tr");
-        const input = row.querySelector("#change-input");
-        const currentQtyElem = row.querySelector(".current-qty");
-
-        let currentQty = parseInt(currentQtyElem.innerText);
-        let change = parseInt(input.value);
-
-        if (isNaN(change)) {
-          alert("Enter a valid number.");
-          return;
-        }
-
-        let newQty = type === "add" ? currentQty + change : currentQty - change;
-        if (newQty < 0) newQty = 0;
-
-        // Update frontend display
-        currentQtyElem.innerText = newQty;
-
-        // Optional: Clear input after action
-        input.value = "";
-      }
-
-      function fetchProducts() {
+      function fetchProducts(filter = "All") {
         document.getElementById("loader").style.display = "block";
         fetch(`${baseUrl}/get-sold-products`)
           .then((res) => res.json())
@@ -179,12 +268,24 @@
             productList.innerHTML = "";
 
             if (data.sold_products && data.sold_products.length > 0) {
-              // Sort products by date in descending order
-              const sortedProducts = data.sold_products.sort(
+              // Filter products
+              let filtered = data.sold_products;
+              if (filter !== "All") {
+                filtered = filtered.filter(
+                  (p) => p.source.toLowerCase() === filter.toLowerCase()
+                );
+              }
+
+              // Sort by date descending
+              const sortedProducts = filtered.sort(
                 (a, b) => new Date(b.date) - new Date(a.date)
               );
 
+              // Render rows
+              let totalAmount = 0;
               sortedProducts.forEach((product) => {
+                totalAmount += Number(product.amount);
+
                 const row = document.createElement("tr");
                 row.setAttribute("data-id", product.id);
                 row.innerHTML = `
@@ -193,14 +294,24 @@
             <td>${product.quantity}</td>
             <td>${product.size}</td>
             <td>${product.amount}</td>
+            <td>${product.source}</td>
+            <td>
+              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+            </td>
           `;
                 productList.appendChild(row);
               });
 
-              totalProducts.innerText = data.total_sold;
+              totalProducts.innerText = totalAmount;
+              if (filtered.length === 0) {
+                const row = document.createElement("tr");
+                row.innerHTML =
+                  '<td colspan="7">No products for selected source.</td>';
+                productList.appendChild(row);
+              }
             } else {
               const row = document.createElement("tr");
-              row.innerHTML = '<td colspan="6">No products available.</td>';
+              row.innerHTML = '<td colspan="7">No products available.</td>';
               productList.appendChild(row);
               totalProducts.innerText = 0;
             }
@@ -211,137 +322,12 @@
           });
       }
 
-      function searchProduct() {
-        const query = document.getElementById("searchInput").value.trim();
-        if (!query) {
-          alert("Please enter a product title to search.");
-          return;
-        }
-        document.getElementById("loader").style.display = "block";
-        fetch(
-          `${baseUrl}/search-product?q=${encodeURIComponent(
-            query
-          )}&type=soldproduct`
-        )
-          .then((res) => res.json())
-          .then((data) => {
-            document.getElementById("loader").style.display = "none";
-            const productList = document.getElementById("product-list");
-            productList.innerHTML = "";
-
-            if (data.results && data.results.length > 0) {
-              data.results.forEach((product) => {
-                const row = document.createElement("tr");
-                row.setAttribute("data-id", product.id);
-                row.innerHTML = `
-                               <td>${product.date}</td>
-                                <td>${product.title}</td>
-                                <td>${product.quantity}</td>
-                                <td>${product.size}</td>
-                                <td>${product.amount}</td>
-                              <td>
-                                <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-                                <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-                              </td>
-                            `;
-                productList.appendChild(row);
-              });
-            } else {
-              document.getElementById("loader").style.display = "none";
-              const row = document.createElement("tr");
-              row.innerHTML = `<td colspan="5">No matching results found.</td>`;
-              productList.appendChild(row);
-            }
-          })
-          .catch((err) => {
-            document.getElementById("loader").style.display = "none";
-            console.error("Search error:", err);
-            alert("Failed to search. Please check console for error.");
-          });
-      }
-
-      function editProduct(button) {
-        const row = button.closest("tr");
-        const cells = row.querySelectorAll("td");
-
-        for (let i = 0; i <= 4; i++) {
-          if (i === 2) {
-            const currentQty = parseInt(cells[i].innerText);
-            cells[i].innerHTML = `
-          <div style="align-items: center; gap: 8px;">
-            <span style="font-size: 14px;">Current: <span class="current-qty">${currentQty}</span></span>
-            <button onclick="updateQty(this, 'add')" style="padding: 4px 8px; background-color: #4CAF50; color: white; border: none; border-radius: 4px;">+</button>
-            <input type="number" id="change-input" placeholder="0" style="width: 60px; padding: 4px;" />
-            <button onclick="updateQty(this, 'subtract')" style="padding: 4px 8px; background-color: #f44336; color: white; border: none; border-radius: 4px;">-</button>
-          </div>
-        `;
-            cells[i].contentEditable = false; // disable contentEditable here
-            cells[i].style.backgroundColor = "#ffffdd";
-          }
-        }
-
-        button.innerHTML = '<i class="fa fa-save"></i>';
-        button.setAttribute("onclick", "saveProduct(this)");
-      }
-
-      function saveProduct(button) {
-        const row = button.closest("tr");
-        const cells = row.querySelectorAll("td");
-        const productId = row.dataset.id;
-
-        const updatedData = {
-          title: cells[0].innerText.trim(),
-          price: cells[1].innerText.trim(),
-          quantity: parseInt(row.querySelector(".current-qty").innerText), // ✅ Only number
-          size: cells[3].innerText.trim(),
-        };
-        document.getElementById("loader").style.display = "block";
-        fetch(`${baseUrl}/update-product/${productId}?karkhana=karkhana`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedData),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            document.getElementById("loader").style.display = "none";
-            if (data.status === "success") {
-              alert("Product updated successfully!");
-
-              const row = button.closest("tr");
-              const cells = row.querySelectorAll("td");
-
-              // Reset quantity cell
-              const qtyElem = row.querySelector(".current-qty");
-              const finalQty = qtyElem ? qtyElem.innerText : cells[2].innerText;
-              cells[2].innerHTML = finalQty;
-
-              // Reset all cells editable false + remove background
-              for (let i = 0; i <= 4; i++) {
-                cells[i].contentEditable = false;
-                cells[i].style.backgroundColor = "";
-              }
-
-              // Change save icon back to edit
-              button.innerHTML = '<i class="fa fa-pen"></i>';
-              button.setAttribute("onclick", "editProduct(this)");
-            } else {
-              alert("Failed to update product.");
-            }
-          })
-          .catch((err) => {
-            document.getElementById("loader").style.display = "none";
-            console.error("Error updating product:", err);
-          });
-      }
-
       function deleteProduct(button) {
         const row = button.closest("tr");
         const productId = row.dataset.id;
         if (!confirm("Are you sure you want to delete this product?")) return;
         document.getElementById("loader").style.display = "block";
-        fetch(`${baseUrl}/delete-product/${productId}?karkhana=karkhana`, {
+        fetch(`${baseUrl}/delete-sold-product/${productId}`, {
           method: "DELETE",
         })
           .then((res) => res.json())

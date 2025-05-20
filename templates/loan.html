@@ -89,7 +89,12 @@
                 <th>Customer ID</th>
                 <th>Name</th>
                 <th>Phone</th>
-                <th>Items Bought</th>
+
+                <th>Product</th>
+                <th>Size</th>
+                <th>Qty</th>
+                <th>Price</th>
+
                 <th>Total Amount</th>
                 <th>Amount Paid</th>
                 <th>Amount Left</th>
@@ -129,27 +134,79 @@
 
             if (data.results && data.results.length > 0) {
               data.results.forEach((cust) => {
-                const row = document.createElement("tr");
-                row.dataset.customerId = cust.customer_id;
+                const items = JSON.parse(cust.items_bought || "{}");
+                const itemsArray = Object.values(items);
+                const rowSpan = itemsArray.length || 1;
 
-                row.innerHTML = `
-            <td>${cust.customer_id}</td>
-            <td>${cust.name}</td>
-            <td>${cust.phone}</td>
-            <td>${cust.items}</td>
-            <td>${cust.amount_total}</td>
-            <td>${cust.amount_paid}</td>
-            <td>${cust.amount_left}</td>
-            <td>
-              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-            </td>
-          `;
-                list.appendChild(row);
+                if (itemsArray.length === 0) {
+                  // Handle customer with no items
+                  const row = document.createElement("tr");
+                  row.dataset.customerId = cust.customer_id;
+
+                  row.innerHTML = `
+        <td rowspan="${rowSpan}">${cust.customer_id}</td>
+        <td rowspan="${rowSpan}">${cust.name}</td>
+        <td rowspan="${rowSpan}">${cust.phone}</td>
+        <td class='subtr'>-</td>
+        <td class='subtr'>-</td>
+        <td class='subtr'>-</td>
+        <td class='subtr'>-</td>
+        <td rowspan="${rowSpan}">${cust.amount_total}</td>
+        <td rowspan="${rowSpan}">${cust.amount_paid}</td>
+        <td rowspan="${rowSpan}">${cust.amount_left}</td>
+        <td rowspan="${rowSpan}">
+          <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+        </td>
+      `;
+                  list.appendChild(row);
+                } else {
+                  itemsArray.forEach((item, index) => {
+                    const row = document.createElement("tr");
+                    row.dataset.customerId = cust.customer_id;
+
+                    row.innerHTML = `
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.customer_id}</td>`
+              : ""
+          }
+          ${index === 0 ? `<td rowspan="${rowSpan}">${cust.name}</td>` : ""}
+          ${index === 0 ? `<td rowspan="${rowSpan}">${cust.phone}</td>` : ""}
+          <td class='subtr'>${item.title || "-"}</td>
+          <td class='subtr'>${item.size || "-"}</td>
+          <td class='subtr'>${item.quantity || "-"}</td>
+          <td class='subtr'>${item.price || "-"}</td>
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.amount_total}</td>`
+              : ""
+          }
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.amount_paid}</td>`
+              : ""
+          }
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">${cust.amount_left}</td>`
+              : ""
+          }
+          ${
+            index === 0
+              ? `<td rowspan="${rowSpan}">
+                <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+            <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+          </td>`
+              : ""
+          }
+        `;
+                    list.appendChild(row);
+                  });
+                }
               });
             } else {
               const row = document.createElement("tr");
-              row.innerHTML = `<td colspan="7" class="no-data">No customers found</td>`;
+              row.innerHTML = `<td colspan="11" class="no-data">No customers found</td>`;
               list.appendChild(row);
             }
           })
@@ -163,16 +220,17 @@
       function saveProduct(button) {
         const row = button.closest("tr");
         const cells = row.querySelectorAll("td");
-        const productId = row.dataset.customerId;
+        const productId = cells[0].innerText.trim();
 
         const updatedData = {
           name: cells[1].innerText.trim(),
           phone: cells[2].innerText.trim(),
           items_bought: cells[3].innerText.trim(),
-          amountTotal: cells[4].innerText.trim(),
-          amountPaid: cells[5].innerText.trim(),
-          amountLeft: cells[6].innerText.trim(),
+          amountTotal: cells[7].innerText.trim(),
+          amountPaid: cells[8].innerText.trim(),
+          amountLeft: cells[9].innerText.trim(),
         };
+        console.log(updatedData + productId);
         document.getElementById("loader").style.display = "block";
         fetch(`${baseUrl}/update-customer/${productId}`, {
           method: "PUT",
@@ -209,23 +267,63 @@
 
             if (data.customers && data.customers.length > 0) {
               data.customers.forEach((cust) => {
-                const row = document.createElement("tr");
-                row.dataset.customerId = cust.customer_id;
+                let itemsRows = "";
 
-                row.innerHTML = `
-                  <td>${cust.customer_id}</td>
-                  <td>${cust.name}</td>
-                  <td>${cust.phone}</td>
-                  <td>${cust.items_bought}</td>
-                  <td>${cust.amount_total}</td>
-                  <td>${cust.amount_paid}</td>
-                  <td>${cust.amount_left}</td>
-                  <td>
-              <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
-              <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-            </td>
+                try {
+                  const fixed = cust.items_bought
+                    .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+                    .replace(/'/g, '"');
+                  const itemsObj = JSON.parse(fixed);
+
+                  const itemsArray = Object.values(itemsObj);
+
+                  // handle each item as its own row
+                  itemsArray.forEach((item, index) => {
+                    const row = document.createElement("tr");
+                    if (index === 0) {
+                      row.innerHTML = `
+                  <td rowspan="${itemsArray.length}">${cust.customer_id}</td>
+                  <td rowspan="${itemsArray.length}">${cust.name}</td>
+                  <td rowspan="${itemsArray.length}">${cust.phone}</td>
+                  <td class='subtr'>${item.title || "-"}</td>
+                  <td class='subtr'>${item.size || "-"}</td>
+                  <td class='subtr'>${item.quantity || "-"}</td>
+                  <td class='subtr'>${item.price || "-"}</td>
+                  <td rowspan="${itemsArray.length}">${cust.amount_total}</td>
+                  <td rowspan="${itemsArray.length}">${cust.amount_paid}</td>
+                  <td rowspan="${itemsArray.length}">${cust.amount_left}</td>
+                  <td rowspan="${itemsArray.length}">
+                    <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                    <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+                  </td>
                 `;
-                list.appendChild(row);
+                    } else {
+                      row.innerHTML = `
+                  <td>${item.title || "-"}</td>
+                  <td>${item.size || "-"}</td>
+                  <td>${item.quantity || "-"}</td>
+                  <td>${item.price || "-"}</td>
+                `;
+                    }
+                    list.appendChild(row);
+                  });
+                } catch (e) {
+                  const row = document.createElement("tr");
+                  row.innerHTML = `
+              <td>${cust.customer_id}</td>
+              <td>${cust.name}</td>
+              <td>${cust.phone}</td>
+              <td colspan="4" style="color:red;">Invalid items format</td>
+              <td>${cust.amount_total}</td>
+              <td>${cust.amount_paid}</td>
+              <td>${cust.amount_left}</td>
+              <td>
+                <span class="edit" onclick="editProduct(this)"><i class="fa fa-pen"></i></span>
+                <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+              </td>
+            `;
+                  list.appendChild(row);
+                }
               });
             } else {
               const row = document.createElement("tr");
@@ -243,7 +341,7 @@
         const row = button.closest("tr");
         const cells = row.querySelectorAll("td");
 
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 7; i <= 9; i++) {
           cells[i].contentEditable = true;
           cells[i].style.backgroundColor = "#ffffdd";
           cells[i].style.border = "1px solid red";

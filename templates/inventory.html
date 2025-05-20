@@ -5,85 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Inventory</title>
     <link rel="stylesheet" href="../static/css/style.css" />
-    <style>
-      /* Main Content Styling */
-      .main-content {
-        flex: 1;
-        padding: 20px;
-      }
-
-      .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-
-      .cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 20px;
-        margin-top: 30px;
-      }
-
-      .card {
-        background: white;
-        padding: 20px;
-        border-radius: 16px;
-        border: 2px solid;
-        border-image-slice: 1;
-        border-width: 2px;
-        border-image-source: linear-gradient(45deg, #4285f4, #00c3ff);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        text-align: center;
-      }
-
-      .card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-      }
-
-      .card h4 {
-        color: #333;
-        margin-bottom: 10px;
-        font-size: 18px;
-      }
-
-      .card h2 {
-        font-size: 40px;
-        margin-bottom: 10px;
-        color: #4285f4;
-      }
-
-      .card p {
-        color: #777;
-        font-size: 14px;
-      }
-
-      /* Table Styling */
-      table {
-        width: 100%;
-        margin-top: 20px;
-        border-collapse: collapse;
-      }
-
-      th,
-      td {
-        padding: 12px;
-        text-align: center;
-        border: 1px solid #ddd;
-      }
-
-      th {
-        background-color: #4285f4;
-        color: white;
-      }
-
-      td {
-        background-color: #fff;
-      }
-    </style>
   </head>
   <body>
     <div class="dashboard">
@@ -112,6 +33,7 @@
           "
         >
           <h1>GUDAAM</h1>
+
           <div style="display: flex; gap: 10px">
             <input
               type="text"
@@ -140,6 +62,266 @@
             <p>Products with low stock</p>
           </div>
         </div>
+        <!-- Move Items Modal -->
+
+        <!-- Include Bootstrap CSS and optionally jQuery + Select2 for search -->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+        />
+        <link
+          href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+          rel="stylesheet"
+        />
+
+        <!-- Modal -->
+        <div
+          class="modal fade"
+          id="addCustomerModal"
+          tabindex="-1"
+          aria-labelledby="addCustomerLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header justify-content-between">
+                <h5 class="modal-title">Move Inventory</h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                ></button>
+              </div>
+
+              <div class="modal-body">
+                <!-- Location Dropdown -->
+                <div class="mb-3">
+                  <select id="locationSelect" class="form-select">
+                    <option disabled selected>Select Move To Location</option>
+                    <option value="shop">Shop</option>
+
+                    <!-- Add more locations as needed -->
+                  </select>
+                </div>
+
+                <!-- Item Select with Add Button -->
+                <div
+                  class="d-flex justify-content-between align-items-center mb-3"
+                >
+                  <h6>Move Item Details</h6>
+                  <div class="d-flex gap-2 w-50">
+                    <select id="itemSelect" class="form-select">
+                      <option disabled selected>Select Item</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" id="addItemBtn">
+                      Add Item
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Item Table -->
+                <table class="table table-bordered" id="itemTable">
+                  <thead>
+                    <tr>
+                      <th>Item Title</th>
+                      <th>Quantity</th>
+                      <th>Size</th>
+                      <th>Price</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+
+              <div class="modal-footer">
+                <button class="btn btn-success" onclick="submitForm()">
+                  Move
+                </button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scripts -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+        <script>
+          const baseUrl1 = window.location.origin;
+          let products = [];
+
+          document
+            .getElementById("locationSelect")
+            .addEventListener("change", function () {
+              const selectedValue = this.value;
+
+              if (selectedValue) {
+                // Clear old options
+                $("#itemSelect")
+                  .empty()
+                  .append("<option disabled selected>Select Item</option>");
+
+                // Fetch products based on location
+                fetch("/get-products?karkhana=karkhana")
+                  .then((response) => response.json())
+                  .then((data) => {
+                    products = data.products;
+                    products.forEach((product) => {
+                      $("#itemSelect").append(
+                        `<option value="${product.id}">${product.title} - Qty: ${product.quantity} - Size: ${product.size}</option>`
+                      );
+                    });
+                  })
+                  .catch((error) => {
+                    console.error("Error fetching products:", error);
+                  });
+              }
+            });
+
+          $(document).ready(function () {
+            // Init select2
+            $("#itemSelect").select2({
+              width: "100%",
+              placeholder: "Select Item",
+              dropdownParent: $("#addCustomerModal"),
+            });
+
+            // Add item to table
+            $("#addItemBtn").on("click", function () {
+              const selectedId = $("#itemSelect").val();
+
+              const product = products.find((p) => p.id == selectedId);
+              if (!product) {
+                alert("Invalid product selected.");
+                return;
+              }
+
+              const row = $(`
+              <tr data-id="${product.id}" data-max="${product.quantity}" data-price="${product.price}">
+                <td>${product.title}</td>
+                <td>
+                  <input type="number" class="form-control quantity-input" value="1" min="1" max="${product.quantity}">
+                </td>
+                <td>${product.size}</td>
+                <td>
+                  <input type="number" class="form-control total-input" value="${product.price}">
+                </td>
+                <td>
+                  <button class="btn btn-danger btn-sm deleteRow">Delete</button>
+                </td>
+              </tr>
+            `);
+
+              $("#itemTable tbody").append(row);
+
+              // Quantity change listener
+              row.find(".quantity-input").on("input", function () {
+                const $input = $(this);
+                const $tr = $input.closest("tr");
+                const maxQty = parseInt($tr.data("max"));
+                const price = parseFloat($tr.data("price"));
+                let qty = parseInt($input.val());
+
+                if (qty > maxQty) {
+                  alert(
+                    "Quantity cannot exceed available stock (" + maxQty + ")"
+                  );
+                  qty = maxQty;
+                  $input.val(qty);
+                }
+
+                $tr.find(".total-input").val((qty * price).toFixed(2));
+              });
+
+              $("#itemSelect").val(null).trigger("change");
+            });
+
+            // Delete item row
+            $(document).on("click", ".deleteRow", function () {
+              $(this).closest("tr").remove();
+            });
+
+            // Recalculate total on quantity/price change
+            $(document).on(
+              "input",
+              ".quantity-input, .total-input",
+              function () {
+                const $tr = $(this).closest("tr");
+                const qty = parseInt($tr.find(".quantity-input").val()) || 0;
+                const pricePerItem = parseFloat($tr.data("price")) || 0;
+
+                if ($(this).hasClass("quantity-input")) {
+                  $tr.find(".total-input").val((qty * pricePerItem).toFixed(2));
+                }
+              }
+            );
+          });
+
+          // Move inventory submit
+          function submitForm() {
+            const location = $("#locationSelect").val();
+            if (!location) {
+              alert("Location is required");
+              return;
+            }
+
+            const items = [];
+            $("#itemTable tbody tr").each(function () {
+              const id = $(this).data("id");
+              const title = $(this).find("td").eq(0).text();
+              const quantity = $(this).find(".quantity-input").val();
+              const size = $(this).find("td").eq(2).text();
+              const price = parseFloat($(this).find(".total-input").val());
+              items.push({
+                id,
+                title,
+                quantity: parseInt(quantity),
+                size,
+                price: price.toFixed(2),
+              });
+            });
+
+            if (items.length === 0) {
+              alert("Please add at least one item.");
+              return;
+            }
+
+            const data = {
+              location: location,
+              items: items,
+            };
+
+            console.log(data); // ✅ You can replace this with actual AJAX POST
+
+            document.getElementById("loader").style.display = "block";
+
+            $.ajax({
+              url: `${baseUrl1}/move-inventory-to-shop`,
+              method: "POST",
+              contentType: "application/json",
+              data: JSON.stringify(data), // `data` should include the items array
+              success: function (res) {
+                document.getElementById("loader").style.display = "none";
+                alert("Inventory moved successfully!");
+                $("#addCustomerModal").modal("hide");
+              },
+              error: function (xhr) {
+                document.getElementById("loader").style.display = "none";
+                alert(
+                  "Error: " +
+                    (xhr.responseJSON?.message ||
+                      xhr.responseJSON?.error ||
+                      "Something went wrong")
+                );
+              },
+            });
+          }
+        </script>
 
         <div class="row">
           <table>

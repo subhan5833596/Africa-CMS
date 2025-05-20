@@ -469,6 +469,7 @@
                 fetch("/get-products?karkhana=" + selectedValue)
                   .then((response) => response.json())
                   .then((data) => {
+                    $("#itemSelect").empty();
                     products = data.products;
                     products.forEach((product) => {
                       $("#itemSelect").append(
@@ -617,10 +618,13 @@
           function submitForm() {
             const name = $("#customerName").val().trim();
             const location = $("#locationSelect").val();
+
             if (!name || !location) {
               alert("Customer Name and Location are required");
               return;
             }
+
+            document.getElementById("loader").style.display = "block"; // 🔄 Show loader
 
             const items = {};
             let counter = 1;
@@ -661,17 +665,21 @@
               amountPaid: paidAmount.toFixed(2),
               amountLeft: amountLeft.toFixed(2),
             };
+
             console.log(data);
+
             $.ajax({
               url: `${baseUrl1}/add-customers`,
               method: "POST",
               contentType: "application/json",
               data: JSON.stringify(data),
               success: function (res) {
+                document.getElementById("loader").style.display = "none"; // ✅ Hide loader
                 alert(res.message || "Customer added successfully!");
                 $("#addCustomerModal").modal("hide");
               },
               error: function (xhr) {
+                document.getElementById("loader").style.display = "none"; // ❌ Hide loader on error too
                 const errMsg =
                   xhr.responseJSON?.message ||
                   xhr.responseJSON?.error ||
