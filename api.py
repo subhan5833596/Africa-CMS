@@ -1098,7 +1098,7 @@ def get_sold_products():
             spreadsheetId=spreadsheet_id,
             ranges=ranges
         ).execute()
-        print(result)
+
         value_ranges = result.get('valueRanges', [])
 
         for store, store_values in zip(store_ids, value_ranges):
@@ -1107,8 +1107,9 @@ def get_sold_products():
                 if len(row) < 7 or not row[0].strip():  # skip if title missing
                     continue
 
-                sold_product_id,date, title, amount, quantity, size,source = row[:7]
+                sold_product_id, date, title, amount, quantity, size, source = row[:7]
                 quantity = int(quantity) if quantity else 0
+                amount = int(amount) if amount else 0
 
                 product = {
                     'id': idx,
@@ -1120,9 +1121,9 @@ def get_sold_products():
                     'size': size,
                     'source': source
                 }
-                print(product)
+
                 sold_products.append(product)
-                total_sold += int(amount)  # Adjusted to count total quantity sold
+                total_sold += amount  # If total = money. Use `quantity` if total = items sold
 
         if not sold_products:
             return jsonify({'message': 'No sold data found'}), 404
@@ -1134,8 +1135,8 @@ def get_sold_products():
 
     except Exception as e:
         logging.error(f"Error fetching sold products: {e}")
-        return jsonify({'error': str(e)}), 500
-    
+        return jsonify({'error': 'Something went wrong while fetching sold products.'}), 500
+   
 import time
 
 def add_to_sold_products(store_ids, location,date, title, amount, quantity, size):
