@@ -705,9 +705,9 @@
                 <th>Phone</th>
 
                 <th>Product</th>
-                <th>Size</th>
+                <!-- <th>Size</th>
                 <th>Qty</th>
-                <th>Price</th>
+                <th>Price</th> -->
 
                 <th>Total Amount</th>
                 <th>Amount Paid</th>
@@ -718,6 +718,69 @@
             <tbody id="customer-list">
               <!-- Customer data will be populated here -->
             </tbody>
+          </table>
+        </div>
+        <div
+          id="productPopup"
+          style="
+            display: none;
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            max-height: 80vh;
+            width: 90%;
+            max-width: 600px;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            border-top: 5px solid #4285f4;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <h3 style="margin: 0; color: #333">Products Bought</h3>
+            <span
+              onclick="document.getElementById('productPopup').style.display='none'"
+              style="
+                cursor: pointer;
+                font-size: 20px;
+                background: #f0f0f0;
+                padding: 5px 10px;
+                border-radius: 50%;
+                color: #333;
+                transition: background 0.2s;
+              "
+              onmouseover="this.style.background='#ddd'"
+              onmouseout="this.style.background='#f0f0f0'"
+              >&times;</span
+            >
+          </div>
+          <table
+            border="1"
+            cellpadding="8"
+            cellspacing="0"
+            width="100%"
+            style="margin-top: 15px; border-collapse: collapse"
+          >
+            <thead style="background: #4285f4; color: white">
+              <tr>
+                <th>Title</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody id="popupProducts"></tbody>
           </table>
         </div>
       </div>
@@ -758,20 +821,20 @@
                   row.dataset.customerId = cust.customer_id;
 
                   row.innerHTML = `
-        <td rowspan="${rowSpan}">${cust.customer_id}</td>
-        <td rowspan="${rowSpan}">${cust.name}</td>
-        <td rowspan="${rowSpan}">${cust.phone}</td>
-        <td class='subtr'>-</td>
-        <td class='subtr'>-</td>
-        <td class='subtr'>-</td>
-        <td class='subtr'>-</td>
-        <td rowspan="${rowSpan}">${cust.amount_total}</td>
-        <td rowspan="${rowSpan}">${cust.amount_paid}</td>
-        <td rowspan="${rowSpan}">${cust.amount_left}</td>
-        <td rowspan="${rowSpan}">
-          <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-        </td>
-      `;
+              <td rowspan="${rowSpan}">${cust.customer_id}</td>
+              <td rowspan="${rowSpan}">${cust.name}</td>
+              <td rowspan="${rowSpan}">${cust.phone}</td>
+              <td class='subtr'>-</td>
+              <td class='subtr'>-</td>
+              <td class='subtr'>-</td>
+              <td class='subtr'>-</td>
+              <td rowspan="${rowSpan}">${cust.amount_total}</td>
+              <td rowspan="${rowSpan}">${cust.amount_paid}</td>
+              <td rowspan="${rowSpan}">${cust.amount_left}</td>
+              <td rowspan="${rowSpan}">
+                <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+              </td>
+            `;
                   list.appendChild(row);
                 } else {
                   itemsArray.forEach((item, index) => {
@@ -779,40 +842,48 @@
                     row.dataset.customerId = cust.customer_id;
 
                     row.innerHTML = `
-          ${
-            index === 0
-              ? `<td rowspan="${rowSpan}">${cust.customer_id}</td>`
-              : ""
-          }
-          ${index === 0 ? `<td rowspan="${rowSpan}">${cust.name}</td>` : ""}
-          ${index === 0 ? `<td rowspan="${rowSpan}">${cust.phone}</td>` : ""}
-          <td class='subtr'>${item.title || "-"}</td>
-          <td class='subtr'>${item.size || "-"}</td>
-          <td class='subtr'>${item.quantity || "-"}</td>
-          <td class='subtr'>${item.price || "-"}</td>
-          ${
-            index === 0
-              ? `<td rowspan="${rowSpan}">${cust.amount_total}</td>`
-              : ""
-          }
-          ${
-            index === 0
-              ? `<td rowspan="${rowSpan}">${cust.amount_paid}</td>`
-              : ""
-          }
-          ${
-            index === 0
-              ? `<td rowspan="${rowSpan}">${cust.amount_left}</td>`
-              : ""
-          }
-          ${
-            index === 0
-              ? `<td rowspan="${rowSpan}">
-            <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-          </td>`
-              : ""
-          }
-        `;
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">${cust.customer_id}</td>`
+                    : ""
+                }
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">${cust.name}</td>`
+                    : ""
+                }
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">${cust.phone}</td>`
+                    : ""
+                }
+                <td class='subtr'>${item.title || "-"}</td>
+                <td class='subtr'>${item.size || "-"}</td>
+                <td class='subtr'>${item.quantity || "-"}</td>
+                <td class='subtr'>${item.price || "-"}</td>
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">${cust.amount_total}</td>`
+                    : ""
+                }
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">${cust.amount_paid}</td>`
+                    : ""
+                }
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">${cust.amount_left}</td>`
+                    : ""
+                }
+                ${
+                  index === 0
+                    ? `<td rowspan="${rowSpan}">
+                  <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+                </td>`
+                    : ""
+                }
+              `;
                     list.appendChild(row);
                   });
                 }
@@ -889,49 +960,55 @@
                   const itemsArray = Object.values(itemsObj);
 
                   // handle each item as its own row
-                  itemsArray.forEach((item, index) => {
-                    const row = document.createElement("tr");
-                    if (index === 0) {
-                      row.innerHTML = `
-                  <td rowspan="${itemsArray.length}">${cust.customer_id}</td>
-                  <td rowspan="${itemsArray.length}">${cust.name}</td>
-                  <td rowspan="${itemsArray.length}">${cust.phone}</td>
-                  <td class='subtr'>${item.title || "-"}</td>
-                  <td class='subtr'>${item.size || "-"}</td>
-                  <td class='subtr'>${item.quantity || "-"}</td>
-                  <td class='subtr'>${item.price || "-"}</td>
-                  <td rowspan="${itemsArray.length}">${cust.amount_total}</td>
-                  <td rowspan="${itemsArray.length}">${cust.amount_paid}</td>
-                  <td rowspan="${itemsArray.length}">${cust.amount_left}</td>
-                  <td rowspan="${itemsArray.length}">
-                    
-                    <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-                  </td>
-                `;
-                    } else {
-                      row.innerHTML = `
-                  <td>${item.title || "-"}</td>
-                  <td>${item.size || "-"}</td>
-                  <td>${item.quantity || "-"}</td>
-                  <td>${item.price || "-"}</td>
-                `;
-                    }
-                    list.appendChild(row);
-                  });
+                  const row = document.createElement("tr");
+                  row.dataset.customerId = cust.customer_id;
+                  row.innerHTML = `
+        <td>${cust.customer_id}</td>
+        <td>${cust.name}</td>
+        <td>${cust.phone}</td>
+        <td>
+  <button style="
+    padding: 6px 14px;
+    background-color: #4285F4;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+  "
+  onmouseover="this.style.backgroundColor='#2b68d1'"
+  onmouseout="this.style.backgroundColor='#4285F4'"
+  onclick='showProductPopup(${JSON.stringify(itemsArray).replace(
+    /'/g,
+    "&apos;"
+  )})'>
+    View
+  </button>
+</td>
+
+
+        <td>${cust.amount_total}</td>
+        <td>${cust.amount_paid}</td>
+        <td>${cust.amount_left}</td>
+        <td><span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span></td>
+      `;
+                  list.appendChild(row);
                 } catch (e) {
                   const row = document.createElement("tr");
+                  row.dataset.customerId = cust.customer_id;
                   row.innerHTML = `
-              <td>${cust.customer_id}</td>
-              <td>${cust.name}</td>
-              <td>${cust.phone}</td>
-              <td colspan="4" style="color:red;">Invalid items format</td>
-              <td>${cust.amount_total}</td>
-              <td>${cust.amount_paid}</td>
-              <td>${cust.amount_left}</td>
-              <td>
-                <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
-              </td>
-            `;
+                    <td>${cust.customer_id}</td>
+                    <td>${cust.name}</td>
+                    <td>${cust.phone}</td>
+                    <td colspan="4" style="color:red;">Invalid items format</td>
+                    <td>${cust.amount_total}</td>
+                    <td>${cust.amount_paid}</td>
+                    <td>${cust.amount_left}</td>
+                    <td>
+                      <span class="delete" onclick="deleteProduct(this)"><i class="fa fa-trash"></i></span>
+                    </td>
+                  `;
                   list.appendChild(row);
                 }
               });
@@ -945,6 +1022,24 @@
             document.getElementById("loader").style.display = "none";
             console.error(err);
           });
+      }
+
+      function showProductPopup(products) {
+        const tbody = document.getElementById("popupProducts");
+        tbody.innerHTML = "";
+
+        products.forEach((item) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+      <td>${item.title || "-"}</td>
+      <td>${item.size || "-"}</td>
+      <td>${item.quantity || "-"}</td>
+      <td>${item.price || "-"}</td>
+    `;
+          tbody.appendChild(row);
+        });
+
+        document.getElementById("productPopup").style.display = "block";
       }
 
       function editProduct(button) {
