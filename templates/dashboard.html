@@ -276,7 +276,12 @@
       <h1>🛒 MyShop Dashboard</h1>
       <div class="user">
         <span>Hello, Admin</span>
-        <img src="https://i.pravatar.cc/40?img=3" alt="User" />
+        <img
+          src="https://i.pravatar.cc/40?img=3"
+          alt="User"
+          id="logout-image"
+          style="cursor: pointer"
+        />
       </div>
     </div>
 
@@ -486,7 +491,25 @@
             console.error("Error fetching dashboard data:", err);
           });
       }
+      document
+        .getElementById("logout-image")
+        .addEventListener("click", async function () {
+          try {
+            const res = await fetch(`${baseUrl}/logout`, {
+              method: "POST", // or 'GET' depending on your backend
+              credentials: "include", // if you're using cookies
+            });
 
+            if (res.ok) {
+              console.log("✅ Logged out");
+              window.location.href = "/login"; // Redirect to login page
+            } else {
+              console.error("❌ Logout failed");
+            }
+          } catch (err) {
+            console.error("❌ Error:", err);
+          }
+        });
       fetchDashboardData();
     </script>
   </body>
