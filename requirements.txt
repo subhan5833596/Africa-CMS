@@ -3,3 +3,4 @@ google-auth==2.15.0
 google-api-python-client==2.80.0
 flask-cors==4.0.2
 cloudinary==1.29.0
+geoip2==5.1.0
