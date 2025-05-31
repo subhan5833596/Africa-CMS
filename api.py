@@ -1219,7 +1219,7 @@ def delete_sold_product(product_id):
 
 
 import uuid
-import geoip2.database
+
 
 # In-memory DB (or use Mongo/Postgres)
 events = []
@@ -1238,14 +1238,7 @@ def track_event():
     metadata = data.get("metadata", {})
     
     # GeoIP (you need GeoLite2-City.mmdb file from MaxMind)
-    city = country = ""
-    try:
-        reader = geoip2.database.Reader('GeoLite2-City.mmdb')
-        response = reader.city(ip)
-        city = response.city.name
-        country = response.country.name
-    except:
-        pass
+    
 
     event_data = {
         "session_id": session_id,
@@ -1256,8 +1249,6 @@ def track_event():
         "timestamp": timestamp,
         "user_agent": user_agent,
         "ip": ip,
-        "city": city,
-        "country": country,
         "metadata": metadata
     }
 
