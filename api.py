@@ -1211,6 +1211,62 @@ def delete_sold_product(product_id):
 
 
 
+
+
+
+
+
+
+
+import uuid
+import geoip2.database
+
+# In-memory DB (or use Mongo/Postgres)
+events = []
+
+@app.route("/track", methods=["POST"])
+def track_event():
+    data = request.json
+    session_id = data.get("session_id", str(uuid.uuid4()))
+    event_type = data.get("event_type", "unknown")
+    url = data.get("url")
+    referrer = data.get("referrer")
+    email = data.get("email")
+    user_agent = request.headers.get("User-Agent")
+    ip = request.remote_addr
+    timestamp = datetime.utcnow().isoformat()
+    metadata = data.get("metadata", {})
+    
+    # GeoIP (you need GeoLite2-City.mmdb file from MaxMind)
+    city = country = ""
+    try:
+        reader = geoip2.database.Reader('GeoLite2-City.mmdb')
+        response = reader.city(ip)
+        city = response.city.name
+        country = response.country.name
+    except:
+        pass
+
+    event_data = {
+        "session_id": session_id,
+        "email": email,
+        "event_type": event_type,
+        "url": url,
+        "referrer": referrer,
+        "timestamp": timestamp,
+        "user_agent": user_agent,
+        "ip": ip,
+        "city": city,
+        "country": country,
+        "metadata": metadata
+    }
+
+    print("Tracked Event:", event_data)
+    return jsonify({"success": True}), 200
+@app.route('/events', methods=['GET'])
+def get_events():
+    return jsonify(events), 200
+
 # === Start Flask App ===
 if __name__ == '__main__':
     app.run(debug=True)
