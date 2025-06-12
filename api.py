@@ -1139,31 +1139,19 @@ def get_sold_products():
    
 import time
 
-def add_to_sold_products(store_ids, location,date, title, amount, quantity, size):
+def add_to_sold_products(store_ids, location, date, title, amount, quantity, size):
     spreadsheet_id = CUSTOMER_SPREADSHEET_ID
     try:
-        
-        range_name = f'SP - {store_ids}!A2:F'
+        range_name = f'SP - {store_ids}!A:F'
 
-        # Get existing rows to determine next ID
-        result = sheet_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range=range_name
-        ).execute()
-        existing_rows = result.get('values', [])
-        
-        time.sleep(2)
-        if len(existing_rows) == 0:
-            next_id = 2
-        else:
-            next_id = len(existing_rows) + 2
-
+        # Prepare current date
         date = datetime.now().strftime("%Y-%m-%d")
-        # Prepare data to insert
-        values = [[next_id, date, title, amount, quantity, size if size else "-",location]]
+
+        # Prepare data row
+        values = [[None, date, title, amount, quantity, size if size else "-", location]]
         body = {'values': values}
-        
-        # Append row
+
+        # Append data directly (no .get() to avoid quota issues)
         sheet_service.spreadsheets().values().append(
             spreadsheetId=spreadsheet_id,
             range=range_name,
@@ -1177,7 +1165,7 @@ def add_to_sold_products(store_ids, location,date, title, amount, quantity, size
     except Exception as e:
         logging.error(f"Error adding sold product: {e}")
         return jsonify({'error': str(e)}), 500
-
+    
 @app.route('/delete-sold-product/<product_id>', methods=['DELETE'])
 def delete_sold_product(product_id):
     store_id = session.get('store_id')
