@@ -288,7 +288,7 @@ def get_products():
         total_inventory = 0  # This will now track only valid products
 
         ranges = [f'{store}!A2:F' for store in store_ids]
-        print(ranges)
+        # print(ranges)
         result = sheet_service.spreadsheets().values().batchGet(
             spreadsheetId=spreadsheet_id,
             ranges=ranges
@@ -356,7 +356,7 @@ def update_product(product_id):
     try:
         sheet_range = f'{store_id}!B{product_id}:F{product_id}'  # B to E matches title to size
         values = [[title, price, quantity,unit, size]]
-        print(values)
+        # print(values)
         sheet_service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id,
             range=sheet_range,
@@ -573,7 +573,7 @@ def update_inventory(location,store_id, product_id, quantity_sold):
         
 
         rows = result.get('values', [])
-        print(rows)
+        # print(rows)
         for row in rows:
            
             if len(row) > 0 and row[0].isdigit() and int(row[0]) == product_id:  # Check if product ID matches
@@ -585,7 +585,7 @@ def update_inventory(location,store_id, product_id, quantity_sold):
                 # Update the quantity in the sheet (dynamically use store_id as sheet name)
                 update_range = f'{store_id}!D{rows.index(row) + 2}'  # Row is 1-based, so add 2
                 kupdate_range = f'Store1!D{rows.index(row) + 2}'
-                print(update_range)
+                # print(update_range)
                 if location == 'karkhana':
                     sheet_service.spreadsheets().values().update(
                         spreadsheetId=INVENTORY_SPREADSHEET_ID,
@@ -719,7 +719,7 @@ def get_onloan_customers():
 
             for row in values:
                 amount_left = row[6] if len(row) > 6 else "0"
-                print(row)
+                # print(row)
                 # Safely convert to number for comparison
                 try:
                     amount_left_num = float(amount_left)
@@ -752,7 +752,7 @@ def add_customers():
 
     try:
         data = request.get_json()
-        print(data)
+        # print(data)
 
         required_fields = ['name', 'phone', 'location', 'items', 'amountPaid', 'amountLeft', 'amountTotal']
         if not all(field in data for field in required_fields):
@@ -932,7 +932,7 @@ def search_product():
         ).execute()
 
         rows = result.get('values', [])
-        print(rows)
+        # print(rows)
         matches = []
 
         for row in rows:
