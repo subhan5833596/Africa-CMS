@@ -444,3 +444,131 @@ table td {
 .d-flex {
   justify-content: flex-start;
 }
+
+/* Responsive for tablets and smaller devices */
+@media (max-width: 992px) {
+  .dashboard {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    box-shadow: none;
+    padding: 10px;
+  }
+
+  .main-content {
+    padding: 15px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .charts {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header input,
+  #searchInput {
+    width: 100%;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .buttons-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-content {
+    padding: 15px;
+  }
+
+  table {
+    font-size: 14px;
+  }
+
+  .bulk-table input,
+  .modal-content input,
+  .input-large {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  .save-btn,
+  .modal-content button[type="submit"] {
+    width: 100%;
+    padding: 10px;
+  }
+}
+
+/* Extra small devices (phones) */
+@media (max-width: 576px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .header-right img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar nav a {
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+  .card h2 {
+    font-size: 28px;
+  }
+
+  .card h4 {
+    font-size: 16px;
+  }
+
+  .modal-dialog {
+    max-width: 95%;
+  }
+}
+@media (max-width: 576px) {
+  .sidebar {
+    width: 100%;
+    padding: 10px;
+    box-shadow: none;
+    display: block; /* Make sure it's shown */
+  }
+}
+.hamburger {
+  display: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+@media (max-width: 576px) {
+  .hamburger {
+    display: block;
+  }
+
+  .sidebar {
+    display: none; /* Hide by default */
+    position: absolute;
+    top: 60px;
+    left: 0;
+    background: white;
+    z-index: 999;
+  }
+
+  .sidebar.active {
+    display: block;
+  }
+}

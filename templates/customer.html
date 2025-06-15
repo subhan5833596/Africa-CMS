@@ -269,6 +269,47 @@
       .d-flex {
         justify-content: flex-start;
       }
+      @media (max-width: 768px) {
+        .sidebar {
+          position: relative;
+          width: 100%;
+          padding: 10px;
+        }
+
+        .sidebar nav {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
+        .sidebar nav a {
+          flex: 1 1 45%;
+          text-align: center;
+          background: #495057;
+          padding: 10px;
+          border-radius: 4px;
+        }
+
+        .main-content {
+          margin-left: 0;
+          padding: 1rem;
+        }
+
+        .main-content h1 {
+          font-size: 1.2rem;
+        }
+
+        .btn,
+        input,
+        select {
+          font-size: 14px !important;
+        }
+
+        #searchInput {
+          width: 100% !important;
+          margin-bottom: 10px;
+        }
+      }
     </style>
   </head>
   <body>
