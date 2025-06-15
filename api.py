@@ -553,39 +553,54 @@ def checkout():
         return jsonify({'error': str(e)}), 500
 
 
-def update_inventory(location,store_id, product_id, quantity_sold):
+import time
+
+update_inventory_counter = 0
+update_inventory_start_time = time.time()
+
+def update_inventory(location, store_id, product_id, quantity_sold):
+    global update_inventory_counter, update_inventory_start_time
     try:
-        # Get the current inventory for the product (dynamically use store_id as sheet name)
+        # Throttle logic: 50 requests per minute
+        update_inventory_counter += 1
+        if update_inventory_counter == 1:
+            update_inventory_start_time = time.time()
+        elif update_inventory_counter > 40:
+            elapsed = time.time() - update_inventory_start_time
+            if elapsed < 60:
+                wait_time = 60 - elapsed
+                print(f"[Inventory] 50 requests reached. Waiting for {round(wait_time, 2)} seconds...")
+                time.sleep(wait_time)
+            update_inventory_counter = 1
+            update_inventory_start_time = time.time()
+
+        # Get the current inventory
         sheet_range = f'{store_id}!A2:E'
         ksheet_range = f'Store1!A2:F'
 
         if location == 'karkhana':
             result = sheet_service.spreadsheets().values().get(
-            spreadsheetId=INVENTORY_SPREADSHEET_ID,
-            range=ksheet_range
-        ).execute()
+                spreadsheetId=INVENTORY_SPREADSHEET_ID,
+                range=ksheet_range
+            ).execute()
         else:
             result = sheet_service.spreadsheets().values().get(
-            spreadsheetId=SHOP_SPREADSHEET_ID,
-            range=sheet_range
-        ).execute()
-          # Assuming store_id is the sheet name
-        
+                spreadsheetId=SHOP_SPREADSHEET_ID,
+                range=sheet_range
+            ).execute()
 
         rows = result.get('values', [])
-        # print(rows)
+
         for row in rows:
-           
-            if len(row) > 0 and row[0].isdigit() and int(row[0]) == product_id:  # Check if product ID matches
-                current_quantity = int(row[3])  # Column E (index 4) contains quantity
+            if len(row) > 0 and row[0].isdigit() and int(row[0]) == product_id:
+                current_quantity = int(row[3])
                 new_quantity = current_quantity - quantity_sold
                 if new_quantity < 0:
                     raise ValueError("Insufficient stock")
 
-                # Update the quantity in the sheet (dynamically use store_id as sheet name)
-                update_range = f'{store_id}!D{rows.index(row) + 2}'  # Row is 1-based, so add 2
+                update_range = f'{store_id}!D{rows.index(row) + 2}'
                 kupdate_range = f'Store1!D{rows.index(row) + 2}'
-                # print(update_range)
+
                 if location == 'karkhana':
                     sheet_service.spreadsheets().values().update(
                         spreadsheetId=INVENTORY_SPREADSHEET_ID,
@@ -600,10 +615,13 @@ def update_inventory(location,store_id, product_id, quantity_sold):
                         valueInputOption="USER_ENTERED",
                         body={"values": [[new_quantity]]}
                     ).execute()
-
                 break
+
+        # print(f"[Inventory] Request #{update_inventory_counter} sent.")
+
     except Exception as e:
         raise Exception(f"Error updating inventory: {e}")
+
 
 def store_customer_data(store_id, name, phone, items_bought_list, amount_paid, remaining_balance):
     try:
@@ -746,6 +764,7 @@ def get_onloan_customers():
 from datetime import datetime
 @app.route('/add-customers', methods=['POST'])
 def add_customers():
+    # print("Current time:", datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
     store_id = session.get('store_id')
     if not store_id:
         return jsonify({'message': 'Store ID is required. Please log in.'}), 400
@@ -799,12 +818,6 @@ def add_customers():
             body={"values": [customer_row]}
         ).execute()
 
-        # ✅ Update inventory using valid product id
-        for item in items_list:
-            product_id = int(item['id'])  # Now properly validated
-            quantity_sold = int(item['quantity'])
-            update_inventory(data['location'], store_id, product_id, quantity_sold)
-
         # ✅ Add to sold products
         date = datetime.now().strftime("%Y-%m-%d")
         for item in items_list:
@@ -817,6 +830,13 @@ def add_customers():
                 item['quantity'],
                 item['size']
             )
+
+
+        # ✅ Update inventory using valid product id
+        for item in items_list:
+            product_id = int(item['id'])  # Now properly validated
+            quantity_sold = int(item['quantity'])
+            update_inventory(data['location'], store_id, product_id, quantity_sold)
 
         return jsonify({'message': 'Customer added and inventory updated successfully.'}), 200
 
@@ -1139,19 +1159,44 @@ def get_sold_products():
    
 import time
 
-def add_to_sold_products(store_ids, location, date, title, amount, quantity, size):
-    spreadsheet_id = CUSTOMER_SPREADSHEET_ID
-    try:
-        range_name = f'SP - {store_ids}!A:F'
+counter = 0
+start_time = time.time()
 
-        # Prepare current date
+MAX_REQUESTS_PER_MIN = 45
+REQUEST_INTERVAL = 60 / MAX_REQUESTS_PER_MIN  # 1.2 seconds between requests
+
+request_times = []
+
+def throttle():
+    global request_times
+    current_time = time.time()
+
+    # Remove timestamps older than 60 seconds
+    request_times = [t for t in request_times if current_time - t < 60]
+
+    if len(request_times) >= MAX_REQUESTS_PER_MIN:
+        wait_time = 60 - (current_time - request_times[0])
+        print(f"[Throttle] Sleeping for {round(wait_time, 2)}s to respect rate limit...")
+        time.sleep(wait_time)
+        # Clean again after sleeping
+        current_time = time.time()
+        request_times = [t for t in request_times if current_time - t < 60]
+
+    request_times.append(time.time())
+
+def add_to_sold_products(store_ids, location, date, title, amount, quantity, size):
+    global counter, start_time
+    spreadsheet_id = CUSTOMER_SPREADSHEET_ID
+
+    try:
+        throttle()  # ⚠️ Apply rate limiting before sending the request
+
+        range_name = f'SP - {store_ids}!A:F'
         date = datetime.now().strftime("%Y-%m-%d")
 
-        # Prepare data row
         values = [[None, date, title, amount, quantity, size if size else "-", location]]
         body = {'values': values}
 
-        # Append data directly (no .get() to avoid quota issues)
         sheet_service.spreadsheets().values().append(
             spreadsheetId=spreadsheet_id,
             range=range_name,
@@ -1160,12 +1205,17 @@ def add_to_sold_products(store_ids, location, date, title, amount, quantity, siz
             body=body
         ).execute()
 
+        counter += 1
+        elapsed = round(time.time() - start_time, 2)
+        # print(f"Requests Sent: {counter}, Total Time Elapsed: {elapsed} sec")
+
         return jsonify({'status': 'success', 'message': 'Product added to sold list'}), 200
 
     except Exception as e:
         logging.error(f"Error adding sold product: {e}")
         return jsonify({'error': str(e)}), 500
-    
+
+
 @app.route('/delete-sold-product/<product_id>', methods=['DELETE'])
 def delete_sold_product(product_id):
     store_id = session.get('store_id')
